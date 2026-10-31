@@ -1,0 +1,329 @@
+import { useEffect, useMemo, useState } from 'react'
+import type { Session, Task } from '../../types'
+import type { Snapshot } from '../../lib/store'
+import { store } from '../../lib/store'
+import {
+  currentWeekStart,
+  formatEuro,
+  isWeekend,
+  totalUnpaid,
+} from '../../lib/week'
+import { buildAdminStats } from '../../lib/stats'
+import { Avatar, EmptyState, Panel } from './ui'
+import { EarningsChart } from './Charts'
+import { Sidebar, type AdminView } from './Sidebar'
+import { TasksTable } from './TasksTable'
+import { History } from '../History'
+import { NewTaskForm } from '../NewTaskForm'
+import { PaymentModal } from '../PaymentModal'
+import { TaskRow } from '../TaskRow'
+
+type Theme = 'light' | 'dark'
+
+const THEME_KEY = 'flowtask-theme'
+
+function useTheme(): [Theme, () => void] {
+  const [theme, setTheme] = useState<Theme>(() => {
+    const saved = localStorage.getItem(THEME_KEY)
+    if (saved === 'light' || saved === 'dark') return saved
+    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  })
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    localStorage.setItem(THEME_KEY, theme)
+  }, [theme])
+  return [theme, () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))]
+}
+
+const VIEW_TITLES: Record<AdminView, { title: string; subtitle: string }> = {
+  inicio: { title: 'Início', subtitle: 'Resumo da semana e o que falta pagar.' },
+  tarefas: { title: 'Tarefas', subtitle: 'Cria, acompanha e apaga tarefas.' },
+  historico: { title: 'Histórico', subtitle: 'Todas as semanas, já fechadas.' },
+}
+
+interface Props {
+  session: Session
+  snapshot: Snapshot
+  onRefresh: () => Promise<void>
+  onLogout: () => void
+  error: string | null
+}
+
+/** Número grande e legível — o coração do painel. */
+function BigStat({
+  label,
+  value,
+  hint,
+  tone,
+}: {
+  label: string
+  value: string
+  hint: string
+  tone?: 'green' | 'gold' | 'red'
+}) {
+  return (
+    <div className={`bigstat ${tone ?? ''}`}>
+      <span className="bigstat-label">{label}</span>
+      <span className="bigstat-value">{value}</span>
+      <span className="bigstat-hint">{hint}</span>
+    </div>
+  )
+}
+
+export function AdminDashboard({ session, snapshot, onRefresh, onLogout, error }: Props) {
+  const [theme, toggleTheme] = useTheme()
+  const [view, setView] = useState<AdminView>('inicio')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [showForm, setShowForm] = useState(false)
+  const [payingWeek, setPayingWeek] = useState<string | null>(null)
+
+  const tasks = snapshot.tasks
+  const payments = snapshot.payments
+  const stats = useMemo(() => buildAdminStats(tasks, payments), [tasks, payments])
+
+  const weekStart = currentWeekStart()
+  const unpaid = totalUnpaid(tasks)
+  const weekend = isWeekend()
+
+  const toDo = tasks.filter((t) => t.status === 'pendente')
+  const done = tasks.filter((t) => t.status === 'feita')
+  const declined = stats.declined
+
+  async function action(fn: () => Promise<void>) {
+    await fn()
+    await onRefresh()
+  }
+
+  function openNewTask() {
+    setView('tarefas')
+    setShowForm(true)
+    setSidebarOpen(false)
+  }
+
+  const meta = VIEW_TITLES[view]
+
+  return (
+    <div className="admin">
+      <Sidebar
+        view={view}
+        onView={setView}
+        pendingCount={toDo.length}
+        unpaidCents={formatEuro(unpaid)}
+        name={session.name}
+        code={snapshot.household.invite_code}
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        onLogout={onLogout}
+        onNewTask={openNewTask}
+      />
+
+      <div className="main">
+        <header className="topnav">
+          <button className="icon-btn hide-mobile" onClick={() => setSidebarOpen(true)} aria-label="Menu">
+            ☰
+          </button>
+          <div className="crumb">
+            <b>{meta.title}</b>
+          </div>
+          <div className="spacer" />
+          <button className="icon-btn" onClick={toggleTheme} aria-label="Mudar tema">
+            {theme === 'dark' ? '☀' : '☾'}
+          </button>
+          <div className="user-chip hide-mobile">
+            <Avatar name={session.name} />
+            <div className="who">
+              <b>{session.name}</b>
+              <span>Chefe</span>
+            </div>
+          </div>
+        </header>
+
+        <div className="page">
+          <div className="page-head">
+            <div>
+              <h1>{meta.title}</h1>
+              <p>{meta.subtitle}</p>
+            </div>
+            <button className="abtn primary" onClick={openNewTask}>
+              + Nova tarefa
+            </button>
+          </div>
+
+          {error && (
+            <div className="panel error-panel">
+              <span>⚠️ {error}</span>
+            </div>
+          )}
+
+          {/* ---------- INÍCIO ---------- */}
+          {view === 'inicio' && (
+            <>
+              <div className="grid bigstats">
+                <BigStat
+                  label="Por pagar"
+                  value={formatEuro(unpaid)}
+                  hint={unpaid > 0 ? 'Tarefas já feitas' : 'Tudo pago 🎉'}
+                  tone="gold"
+                />
+                <BigStat
+                  label="Esta semana"
+                  value={formatEuro(stats.earned.value)}
+                  hint={`${stats.completed.value} tarefa${stats.completed.value === 1 ? '' : 's'} feita${
+                    stats.completed.value === 1 ? '' : 's'
+                  }`}
+                  tone="green"
+                />
+                <BigStat
+                  label="Por fazer"
+                  value={String(toDo.length)}
+                  hint={toDo.length > 0 ? 'Tarefas pendentes' : 'Nada pendente'}
+                />
+              </div>
+
+              {weekend && unpaid > 0 && (
+                <div className="callout gold">
+                  <span className="callout-icon">🔔</span>
+                  <div className="callout-body">
+                    <b>É fim de semana — hora de pagar!</b>
+                    <p>Tens {formatEuro(unpaid)} para pagar.</p>
+                  </div>
+                  <button className="abtn primary" onClick={() => setPayingWeek(weekStart)}>
+                    Pagar
+                  </button>
+                </div>
+              )}
+
+              {unpaid > 0 && !(weekend && unpaid > 0) && (
+                <div className="callout">
+                  <span className="callout-icon">💶</span>
+                  <div className="callout-body">
+                    <b>{formatEuro(unpaid)} por pagar</b>
+                    <p>Podes pagar quando quiseres.</p>
+                  </div>
+                  <button className="abtn" onClick={() => setPayingWeek(weekStart)}>
+                    Pagar
+                  </button>
+                </div>
+              )}
+
+              {declined.length > 0 && (
+                <div className="callout red">
+                  <span className="callout-icon">✕</span>
+                  <div className="callout-body">
+                    <b>
+                      {declined.length} tarefa{declined.length === 1 ? '' : 's'} não feita
+                      {declined.length === 1 ? '' : 's'}
+                    </b>
+                    <p>
+                      {declined
+                        .slice(0, 2)
+                        .map((t) => `${t.title}: ${t.declined_reason}`)
+                        .join(' · ')}
+                    </p>
+                  </div>
+                  <button className="abtn" onClick={() => setView('tarefas')}>
+                    Ver
+                  </button>
+                </div>
+              )}
+
+              <Panel title="Tarefas por fazer" subtitle={toDo.length === 0 ? undefined : 'Aguardam o trabalhador'}>
+                {toDo.length === 0 ? (
+                  <EmptyState icon="🌿">Não há tarefas por fazer.</EmptyState>
+                ) : (
+                  <div className="tasks">
+                    {toDo.map((task) => (
+                      <TaskRow
+                        key={task.id}
+                        task={task}
+                        session={session}
+                        onComplete={() => {}}
+                        onUndo={() => {}}
+                        onDelete={(t) => void action(() => store.deleteTask(session, t.id))}
+                      />
+                    ))}
+                  </div>
+                )}
+              </Panel>
+
+              {done.length > 0 && (
+                <Panel title="Feitas, por pagar" subtitle="Marcadas pelo trabalhador">
+                  <div className="tasks">
+                    {done.map((task) => (
+                      <TaskRow
+                        key={task.id}
+                        task={task}
+                        session={session}
+                        onComplete={() => {}}
+                        onUndo={(t) => void action(() => store.undoTask(session, t.id))}
+                        onDelete={(t) => void action(() => store.deleteTask(session, t.id))}
+                      />
+                    ))}
+                  </div>
+                  <button
+                    className="abtn primary block-btn"
+                    onClick={() => setPayingWeek(weekStart)}
+                  >
+                    Pagar {formatEuro(unpaid)}
+                  </button>
+                </Panel>
+              )}
+
+              <Panel title="Ganhos por semana" subtitle="Últimas 8 semanas">
+                <EarningsChart data={stats.series} />
+              </Panel>
+            </>
+          )}
+
+          {/* ---------- TAREFAS ---------- */}
+          {view === 'tarefas' && (
+            <>
+              {showForm && (
+                <div style={{ marginBottom: 16 }}>
+                  <Panel title="Nova tarefa" subtitle="O que há para fazer e quanto vale">
+                    <NewTaskForm
+                      session={session}
+                      onCreated={() => {
+                        setShowForm(false)
+                        void onRefresh()
+                      }}
+                    />
+                  </Panel>
+                </div>
+              )}
+              {!showForm && (
+                <button className="abtn primary block-btn" style={{ marginBottom: 16 }} onClick={() => setShowForm(true)}>
+                  + Nova tarefa
+                </button>
+              )}
+
+              <div className="panel">
+                <TasksTable
+                  tasks={tasks}
+                  onDelete={(t: Task) => void action(() => store.deleteTask(session, t.id))}
+                />
+              </div>
+            </>
+          )}
+
+          {/* ---------- HISTÓRICO ---------- */}
+          {view === 'historico' && <History tasks={tasks} payments={payments} />}
+        </div>
+      </div>
+
+      {payingWeek && (
+        <PaymentModal
+          session={session}
+          weekStart={payingWeek}
+          taskIds={done.map((t) => t.id)}
+          amountCents={unpaid}
+          onClose={() => setPayingWeek(null)}
+          onDone={() => {
+            setPayingWeek(null)
+            void onRefresh()
+          }}
+        />
+      )}
+    </div>
+  )
+}
