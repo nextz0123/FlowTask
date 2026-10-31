@@ -35,6 +35,21 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         navigateFallbackDenylist: [/^\/api/],
+        // Ativa a versão nova imediatamente, sem esperar que o utilizador feche a app
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
+        // O index.html nunca deve vir da cache (é ele que aponta para os ficheiros novos)
+        runtimeCaching: [
+          {
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'flowtask-pages',
+              networkTimeoutSeconds: 3,
+            },
+          },
+        ],
       },
     }),
   ],
