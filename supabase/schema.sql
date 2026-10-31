@@ -58,12 +58,27 @@ create table if not exists public.tasks (
 create index if not exists tasks_household_idx on public.tasks (household_id, created_at desc);
 create index if not exists payments_household_idx on public.payments (household_id, paid_at desc);
 
+-- Avisos do trabalhador ao chefe ("hora de receber")
+create table if not exists public.reminders (
+  id uuid primary key default gen_random_uuid(),
+  household_id uuid not null references public.households (id) on delete cascade,
+  week_start date not null,
+  amount_cents integer not null default 0,
+  message text,
+  created_by uuid references public.members (id) on delete set null,
+  created_at timestamptz not null default now(),
+  seen_at timestamptz
+);
+
+create index if not exists reminders_household_idx on public.reminders (household_id, created_at desc);
+
 -- ---------- Segurança (RLS): tabelas fechadas ao público ----------
 
 alter table public.households enable row level security;
 alter table public.members enable row level security;
 alter table public.tasks enable row level security;
 alter table public.payments enable row level security;
+alter table public.reminders enable row level security;
 
 -- ---------- Função: criar família ----------
 create or replace function public.create_household(p_name text, p_code text)
@@ -155,7 +170,8 @@ begin
     'household', (select to_jsonb(h) from households h where h.id = v_household),
     'members', coalesce((select jsonb_agg(m order by m.created_at) from members m where m.household_id = v_household), '[]'::jsonb),
     'tasks', coalesce((select jsonb_agg(t order by t.created_at desc) from tasks t where t.household_id = v_household), '[]'::jsonb),
-    'payments', coalesce((select jsonb_agg(p order by p.paid_at desc) from payments p where p.household_id = v_household), '[]'::jsonb)
+    'payments', coalesce((select jsonb_agg(p order by p.paid_at desc) from payments p where p.household_id = v_household), '[]'::jsonb),
+    'reminders', coalesce((select jsonb_agg(r order by r.created_at desc) from reminders r where r.household_id = v_household), '[]'::jsonb)
   ) into v_result;
 
   return v_result;
@@ -304,6 +320,55 @@ begin
 end;
 $$;
 
+-- Trabalhador avisa o chefe de que é hora de receber.
+create or replace function public.app_send_reminder(
+  p_code text,
+  p_member_id uuid,
+  p_week_start date,
+  p_amount_cents integer,
+  p_message text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_household uuid;
+begin
+  select h.id into v_household from households h
+  where upper(h.invite_code) = upper(trim(p_code));
+  if v_household is null then raise exception 'Código de família inválido.'; end if;
+
+  insert into reminders (household_id, week_start, amount_cents, message, created_by)
+  values (v_household, p_week_start, greatest(coalesce(p_amount_cents, 0), 0),
+          nullif(trim(coalesce(p_message, '')), ''), p_member_id);
+end;
+$$;
+
+-- Chefe marca o aviso como visto.
+create or replace function public.app_mark_reminder_seen(
+  p_code text,
+  p_reminder_id uuid
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_household uuid;
+begin
+  select h.id into v_household from households h
+  where upper(h.invite_code) = upper(trim(p_code));
+  if v_household is null then raise exception 'Código de família inválido.'; end if;
+
+  update reminders
+  set seen_at = now()
+  where id = p_reminder_id and household_id = v_household and seen_at is null;
+end;
+$$;
+
 -- ---------- Permissões ----------
 revoke all on function public.create_household(text, text) from public;
 revoke all on function public.join_household(text, text, text) from public;
@@ -313,6 +378,8 @@ revoke all on function public.app_set_task_status(text, uuid, uuid, text) from p
 revoke all on function public.app_decline_task(text, uuid, text) from public;
 revoke all on function public.app_delete_task(text, uuid) from public;
 revoke all on function public.app_pay_week(text, date, uuid[], integer, text, text) from public;
+revoke all on function public.app_send_reminder(text, uuid, date, integer, text) from public;
+revoke all on function public.app_mark_reminder_seen(text, uuid) from public;
 
 grant execute on function public.create_household(text, text) to anon, authenticated;
 grant execute on function public.join_household(text, text, text) to anon, authenticated;
@@ -322,6 +389,8 @@ grant execute on function public.app_set_task_status(text, uuid, uuid, text) to 
 grant execute on function public.app_decline_task(text, uuid, text) to anon, authenticated;
 grant execute on function public.app_delete_task(text, uuid) to anon, authenticated;
 grant execute on function public.app_pay_week(text, date, uuid[], integer, text, text) to anon, authenticated;
+grant execute on function public.app_send_reminder(text, uuid, date, integer, text) to anon, authenticated;
+grant execute on function public.app_mark_reminder_seen(text, uuid) to anon, authenticated;
 
 -- ---------- Família inicial (opcional) ----------
 -- Cria a família com o código FAMILIA. Podes mudar o código no painel (Table editor → households).

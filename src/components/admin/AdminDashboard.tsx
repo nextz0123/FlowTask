@@ -5,6 +5,7 @@ import { store } from '../../lib/store'
 import {
   currentWeekStart,
   formatEuro,
+  formatWeekLabel,
   isWeekend,
   totalUnpaid,
 } from '../../lib/week'
@@ -89,6 +90,13 @@ export function AdminDashboard({ session, snapshot, onRefresh, onLogout, error }
   const done = tasks.filter((t) => t.status === 'feita')
   const declined = stats.declined
 
+  // Avisos do trabalhador ainda não vistos
+  const unseenReminders = (snapshot.reminders ?? []).filter((r) => !r.seen_at)
+
+  async function markSeen(id: string) {
+    await action(() => store.markReminderSeen(session, id))
+  }
+
   async function action(fn: () => Promise<void>) {
     await fn()
     await onRefresh()
@@ -154,6 +162,35 @@ export function AdminDashboard({ session, snapshot, onRefresh, onLogout, error }
               <span>⚠️ {error}</span>
             </div>
           )}
+
+          {/* Avisos do trabalhador: "hora de receber" */}
+          {unseenReminders.map((r) => (
+            <div className="callout gold" key={r.id}>
+              <span className="callout-icon">📣</span>
+              <div className="callout-body">
+                <b>O trabalhador pediu para receber!</b>
+                <p>
+                  {formatEuro(r.amount_cents || unpaid)} por pagar · semana de{' '}
+                  {formatWeekLabel(r.week_start)}
+                  {r.message ? ` · “${r.message}”` : ''}
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button
+                  className="abtn primary"
+                  onClick={() => {
+                    setPayingWeek(r.week_start)
+                    void markSeen(r.id)
+                  }}
+                >
+                  Pagar
+                </button>
+                <button className="abtn" onClick={() => void markSeen(r.id)}>
+                  Já vi
+                </button>
+              </div>
+            </div>
+          ))}
 
           {/* ---------- INÍCIO ---------- */}
           {view === 'inicio' && (

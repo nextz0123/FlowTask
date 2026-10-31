@@ -77,6 +77,8 @@ const required = [
   'app_decline_task',
   'app_delete_task',
   'app_pay_week',
+  'app_send_reminder',
+  'app_mark_reminder_seen',
 ]
 const defined = new Set(
   [...sql.matchAll(/create or replace function public\.(\w+)/gi)].map((m) => m[1].toLowerCase()),

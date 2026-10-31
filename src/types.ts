@@ -47,6 +47,19 @@ export interface Payment {
   paid_at: string
 }
 
+/** Aviso do trabalhador ao chefe para pagar. */
+export interface Reminder {
+  id: string
+  household_id: string
+  week_start: string
+  amount_cents: number
+  message: string | null
+  created_by: string | null
+  created_at: string
+  /** Quando o chefe viu/marcou como lido. */
+  seen_at: string | null
+}
+
 /** Sessão local: quem está a usar este dispositivo. */
 export interface Session {
   householdId: string

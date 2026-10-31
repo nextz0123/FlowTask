@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import type { Household, Member, Payment, PaymentMethod, Role, Session, Task } from '../types'
+import type { Household, Member, Payment, PaymentMethod, Reminder, Role, Session, Task } from '../types'
 
 /**
  * Normaliza o URL da Supabase.
@@ -27,6 +27,7 @@ export interface Snapshot {
   members: Member[]
   tasks: Task[]
   payments: Payment[]
+  reminders: Reminder[]
 }
 
 export interface DataStore {
@@ -48,6 +49,13 @@ export interface DataStore {
     session: Session,
     input: { weekStart: string; taskIds: string[]; amountCents: number; method: PaymentMethod; note: string | null },
   ): Promise<void>
+  /** Trabalhador avisa o chefe para pagar a semana. */
+  sendReminder(
+    session: Session,
+    input: { weekStart: string; amountCents: number; message: string | null },
+  ): Promise<void>
+  /** Chefe marca o aviso como visto. */
+  markReminderSeen(session: Session, reminderId: string): Promise<void>
 }
 
 const uid = () =>
@@ -67,11 +75,17 @@ interface DemoDb {
   members: Member[]
   tasks: Task[]
   payments: Payment[]
+  reminders: Reminder[]
 }
 
 function readDemo(): DemoDb {
   const raw = localStorage.getItem(DEMO_KEY)
-  if (raw) return JSON.parse(raw) as DemoDb
+  if (raw) {
+    const db = JSON.parse(raw) as DemoDb
+    // Compatibilidade com dados guardados antes dos avisos existirem
+    if (!db.reminders) db.reminders = []
+    return db
+  }
   const now = new Date().toISOString()
   const household: Household = {
     id: 'demo-house',
@@ -81,7 +95,7 @@ function readDemo(): DemoDb {
   }
   const chefe: Member = { id: 'demo-chefe', household_id: household.id, name: 'Chefe', role: 'chefe', created_at: now }
   const trabalhador: Member = { id: 'demo-trabalhador', household_id: household.id, name: 'Trabalhador', role: 'trabalhador', created_at: now }
-  const db: DemoDb = { households: [household], members: [chefe, trabalhador], tasks: [], payments: [] }
+  const db: DemoDb = { households: [household], members: [chefe, trabalhador], tasks: [], payments: [], reminders: [] }
   writeDemo(db)
   return db
 }
@@ -131,6 +145,9 @@ const demoStore: DataStore = {
         .filter((t) => t.household_id === session.householdId)
         .sort((a, b) => (a.created_at < b.created_at ? 1 : -1)),
       payments: db.payments.filter((p) => p.household_id === session.householdId),
+      reminders: db.reminders
+        .filter((r) => r.household_id === session.householdId)
+        .sort((a, b) => (a.created_at < b.created_at ? 1 : -1)),
     }
   },
 
@@ -214,6 +231,30 @@ const demoStore: DataStore = {
     }
     writeDemo(db)
   },
+
+  async sendReminder(session, input) {
+    const db = readDemo()
+    db.reminders.push({
+      id: uid(),
+      household_id: session.householdId,
+      week_start: input.weekStart,
+      amount_cents: input.amountCents,
+      message: input.message,
+      created_by: session.memberId,
+      created_at: new Date().toISOString(),
+      seen_at: null,
+    })
+    writeDemo(db)
+  },
+
+  async markReminderSeen(_session, reminderId) {
+    const db = readDemo()
+    const r = db.reminders.find((x) => x.id === reminderId)
+    if (r && !r.seen_at) {
+      r.seen_at = new Date().toISOString()
+      writeDemo(db)
+    }
+  },
 }
 
 /* ------------------------------------------------------------------ */
@@ -249,7 +290,10 @@ const cloudStore: DataStore = {
     })
     check(error)
     if (!data) throw new Error('Sem dados.')
-    return data as Snapshot
+    const snap = data as Snapshot
+    // Compatibilidade: versões antigas do app_load não traziam avisos
+    if (!snap.reminders) snap.reminders = []
+    return snap
   },
 
   async createTask(session, input) {
@@ -308,6 +352,25 @@ const cloudStore: DataStore = {
       p_amount_cents: input.amountCents,
       p_method: input.method,
       p_note: input.note,
+    })
+    check(error)
+  },
+
+  async sendReminder(session, input) {
+    const { error } = await supabase!.rpc('app_send_reminder', {
+      p_code: session.code,
+      p_member_id: session.memberId,
+      p_week_start: input.weekStart,
+      p_amount_cents: input.amountCents,
+      p_message: input.message,
+    })
+    check(error)
+  },
+
+  async markReminderSeen(session, reminderId) {
+    const { error } = await supabase!.rpc('app_mark_reminder_seen', {
+      p_code: session.code,
+      p_reminder_id: reminderId,
     })
     check(error)
   },

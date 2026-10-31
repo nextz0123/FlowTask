@@ -78,6 +78,29 @@ export function Dashboard({ session, onLogout }: Props) {
   const toPayThisWeek = currentWeek?.pendingCents ?? 0
   const showReminder = weekend && toPayThisWeek > 0
 
+  // Aviso ao chefe: já foi enviado para esta semana?
+  const reminders = snapshot?.reminders ?? []
+  const sentThisWeek = reminders.find((r) => r.week_start === weekStart)
+  const [reminderBusy, setReminderBusy] = useState(false)
+  const [reminderSent, setReminderSent] = useState(false)
+
+  async function sendReminderToChefe() {
+    setReminderBusy(true)
+    try {
+      await store.sendReminder(session, {
+        weekStart,
+        amountCents: unpaid,
+        message: null,
+      })
+      setReminderSent(true)
+      await refresh()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Não foi possível avisar o chefe.')
+    } finally {
+      setReminderBusy(false)
+    }
+  }
+
   async function action(fn: () => Promise<void>) {
     try {
       await fn()
@@ -163,13 +186,14 @@ export function Dashboard({ session, onLogout }: Props) {
         <div className="reminder">
           <span className="icon">🔔</span>
           <div style={{ flex: 1 }}>
-            <strong>É fim de semana — hora de pagar!</strong>
+            <strong>{isChefe ? 'É fim de semana — hora de pagar!' : 'É fim de semana — hora de receber!'}</strong>
             <p>
               {isChefe
                 ? `Há ${formatEuro(toPayThisWeek)} por pagar das tarefas desta semana.`
-                : `Já fizeste ${formatEuro(toPayThisWeek)} em tarefas esta semana. O chefe vai pagar no fim de semana.`}
+                : `Já fizeste ${formatEuro(toPayThisWeek)} em tarefas esta semana.`}
             </p>
-            {/* Só o chefe paga — o trabalhador não vê botão de pagamento */}
+
+            {/* Chefe: botão de pagar */}
             {isChefe && (
               <button
                 className="btn gold small"
@@ -178,6 +202,24 @@ export function Dashboard({ session, onLogout }: Props) {
               >
                 💸 Pagar agora
               </button>
+            )}
+
+            {/* Trabalhador: avisar o chefe */}
+            {!isChefe && (
+              <>
+                {sentThisWeek || reminderSent ? (
+                  <p className="reminder-sent">✅ Chefe avisado — vais receber {formatEuro(unpaid)}.</p>
+                ) : (
+                  <button
+                    className="btn gold small"
+                    style={{ marginTop: 10 }}
+                    onClick={() => void sendReminderToChefe()}
+                    disabled={reminderBusy}
+                  >
+                    {reminderBusy ? 'A avisar…' : '📣 Avisar o chefe para pagar'}
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>
