@@ -142,7 +142,7 @@ export function Dashboard({ session, onLogout }: Props) {
         <div className="brand">
           <img src="/favicon.svg" alt="" />
           <div className="who">
-            <strong>{session.name}</strong>
+            <strong>Olá, {session.name}</strong>
             <span>
               {isChefe ? 'Chefe' : 'Trabalhador/a'} · código {snapshot?.household.invite_code ?? '…'}
             </span>
@@ -152,6 +152,8 @@ export function Dashboard({ session, onLogout }: Props) {
           Sair
         </button>
       </header>
+
+      <h1 className="ios-page-title">{tab === 'inicio' ? 'As minhas tarefas' : 'Histórico'}</h1>
 
       {error && (
         <div className="reminder" style={{ background: 'var(--danger-soft)', borderColor: '#f3b7b0' }}>
@@ -231,6 +233,22 @@ export function Dashboard({ session, onLogout }: Props) {
         </button>
         <button className={tab === 'historico' ? 'on' : ''} onClick={() => setTab('historico')}>
           Histórico
+        </button>
+      </nav>
+
+      {/* Barra inferior (só no telemóvel) */}
+      <nav className="ios-tabbar-app">
+        <button className={tab === 'inicio' ? 'on' : ''} onClick={() => setTab('inicio')}>
+          <span className="ico">🏠</span>
+          Início
+        </button>
+        <button className={tab === 'historico' ? 'on' : ''} onClick={() => setTab('historico')}>
+          <span className="ico">🗓</span>
+          Histórico
+        </button>
+        <button onClick={onLogout}>
+          <span className="ico">👤</span>
+          Sair
         </button>
       </nav>
 

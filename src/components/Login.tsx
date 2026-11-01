@@ -61,20 +61,22 @@ export function Login({ onJoined }: Props) {
 
           <div className="field">
             <label>Quem és tu?</label>
-            <div className="chips">
+            <div className="role-picker">
               <button
                 type="button"
-                className={`chip ${role === 'chefe' ? 'on' : ''}`}
+                className={`role ${role === 'chefe' ? 'on' : ''}`}
                 onClick={() => setRole('chefe')}
               >
-                💼 Chefe
+                <span className="emoji">💼</span>
+                Chefe
               </button>
               <button
                 type="button"
-                className={`chip ${role === 'trabalhador' ? 'on' : ''}`}
+                className={`role ${role === 'trabalhador' ? 'on' : ''}`}
                 onClick={() => setRole('trabalhador')}
               >
-                🧑 Trabalhador/a
+                <span className="emoji">🧑</span>
+                Trabalhador
               </button>
             </div>
           </div>
