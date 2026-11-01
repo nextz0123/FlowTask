@@ -37,7 +37,7 @@ export interface DataStore {
   load(session: Session): Promise<Snapshot>
   createTask(
     session: Session,
-    input: { title: string; description: string | null; priceCents: number },
+    input: { title: string; description: string | null; priceCents: number; dueDate: string | null },
   ): Promise<void>
   completeTask(session: Session, taskId: string): Promise<void>
   undoTask(session: Session, taskId: string): Promise<void>
@@ -165,6 +165,7 @@ const demoStore: DataStore = {
       completed_at: null,
       declined_reason: null,
       declined_at: null,
+      due_date: input.dueDate,
       payment_id: null,
       created_at: new Date().toISOString(),
     })
@@ -303,6 +304,7 @@ const cloudStore: DataStore = {
       p_title: input.title,
       p_description: input.description,
       p_price_cents: input.priceCents,
+      p_due_date: input.dueDate,
     })
     check(error)
   },

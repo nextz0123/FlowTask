@@ -33,6 +33,8 @@ export interface Task {
   /** Motivo da recusa (só quando status = 'recusada'). */
   declined_reason: string | null
   declined_at: string | null
+  /** Prazo opcional para concluir a tarefa ("YYYY-MM-DD"). */
+  due_date: string | null
   payment_id: string | null
   created_at: string
 }

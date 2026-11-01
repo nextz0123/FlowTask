@@ -1,5 +1,17 @@
 import type { Session, Task } from '../types'
-import { formatDate, formatEuro } from '../lib/week'
+import { formatDate, formatEuro, toISODate } from '../lib/week'
+
+/** Texto do prazo: "até hoje", "até 5 de nov." ou "atrasada". */
+function dueInfo(due: string): { text: string; late: boolean } {
+  const today = toISODate(new Date())
+  const [y, m, d] = due.split('-').map(Number)
+  const label = new Intl.DateTimeFormat('pt-PT', { day: 'numeric', month: 'short' }).format(
+    new Date(y, m - 1, d),
+  )
+  if (due < today) return { text: `atrasada (era ${label})`, late: true }
+  if (due === today) return { text: 'até hoje', late: false }
+  return { text: `até ${label}`, late: false }
+}
 
 interface Props {
   task: Task
@@ -48,6 +60,11 @@ export function TaskRow({ task, session, onComplete, onUndo, onDelete, onDecline
         {declined && task.declined_reason && (
           <div className="reason">
             <b>Motivo:</b> {task.declined_reason}
+          </div>
+        )}
+        {task.due_date && task.status === 'pendente' && (
+          <div className={`due ${dueInfo(task.due_date).late ? 'late' : ''}`}>
+            ⏱ {dueInfo(task.due_date).text}
           </div>
         )}
       </div>

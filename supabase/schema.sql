@@ -51,9 +51,13 @@ create table if not exists public.tasks (
   completed_at timestamptz,
   declined_reason text,
   declined_at timestamptz,
+  due_date date,
   payment_id uuid references public.payments (id) on delete set null,
   created_at timestamptz not null default now()
 );
+
+-- Para projetos criados antes do prazo existir
+alter table public.tasks add column if not exists due_date date;
 
 create index if not exists tasks_household_idx on public.tasks (household_id, created_at desc);
 create index if not exists payments_household_idx on public.payments (household_id, paid_at desc);
@@ -183,7 +187,8 @@ create or replace function public.app_create_task(
   p_member_id uuid,
   p_title text,
   p_description text,
-  p_price_cents integer
+  p_price_cents integer,
+  p_due_date date default null
 )
 returns void
 language plpgsql
@@ -198,8 +203,8 @@ begin
   if v_household is null then raise exception 'Código de família inválido.'; end if;
   if p_price_cents is null or p_price_cents <= 0 then raise exception 'Preço inválido.'; end if;
 
-  insert into tasks (household_id, title, description, price_cents, status, created_by)
-  values (v_household, trim(p_title), nullif(trim(coalesce(p_description, '')), ''), p_price_cents, 'pendente', p_member_id);
+  insert into tasks (household_id, title, description, price_cents, status, created_by, due_date)
+  values (v_household, trim(p_title), nullif(trim(coalesce(p_description, '')), ''), p_price_cents, 'pendente', p_member_id, p_due_date);
 end;
 $$;
 
@@ -373,7 +378,7 @@ $$;
 revoke all on function public.create_household(text, text) from public;
 revoke all on function public.join_household(text, text, text) from public;
 revoke all on function public.app_load(text) from public;
-revoke all on function public.app_create_task(text, uuid, text, text, integer) from public;
+revoke all on function public.app_create_task(text, uuid, text, text, integer, date) from public;
 revoke all on function public.app_set_task_status(text, uuid, uuid, text) from public;
 revoke all on function public.app_decline_task(text, uuid, text) from public;
 revoke all on function public.app_delete_task(text, uuid) from public;
@@ -384,7 +389,7 @@ revoke all on function public.app_mark_reminder_seen(text, uuid) from public;
 grant execute on function public.create_household(text, text) to anon, authenticated;
 grant execute on function public.join_household(text, text, text) to anon, authenticated;
 grant execute on function public.app_load(text) to anon, authenticated;
-grant execute on function public.app_create_task(text, uuid, text, text, integer) to anon, authenticated;
+grant execute on function public.app_create_task(text, uuid, text, text, integer, date) to anon, authenticated;
 grant execute on function public.app_set_task_status(text, uuid, uuid, text) to anon, authenticated;
 grant execute on function public.app_decline_task(text, uuid, text) to anon, authenticated;
 grant execute on function public.app_delete_task(text, uuid) to anon, authenticated;
