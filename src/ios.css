@@ -9,9 +9,9 @@ html[data-theme='light'] {
   --ios-blue: #007aff;
   --ios-blue-dark: #0060df;
   --ios-blue-soft: #e5f0ff;
-  --ios-green: #34c759;
-  --ios-green-dark: #248a3d;
-  --ios-green-soft: #e3f8e8;
+  --ios-green: #007aff;
+  --ios-green-dark: #0060df;
+  --ios-green-soft: #e5f0ff;
   --ios-orange: #ff9500;
   --ios-orange-soft: #fff2e0;
   --ios-red: #ff3b30;
@@ -51,7 +51,7 @@ html[data-theme='dark'] {
   --danger: #ff453a;
   --danger-soft: #3d1512;
   --ios-blue-soft: #0a2540;
-  --ios-green-soft: #10331b;
+  --ios-green-soft: #0a2540;
   --ios-orange-soft: #3a2a05;
   --ios-red-soft: #3d1512;
   --shadow: none;
@@ -125,7 +125,7 @@ html[data-theme='dark'] .btn.ghost:hover {
 }
 
 .btn.gold:hover {
-  background: #2fb350;
+  background: var(--ios-blue-dark);
 }
 
 .btn.block {
@@ -358,7 +358,7 @@ html[data-theme='dark'] .reminder p {
 }
 
 html[data-theme='dark'] .reminder .reminder-sent {
-  color: #30d158;
+  color: var(--ios-blue);
 }
 
 /* ---------- Tabs (segmented control) ---------- */

@@ -6,8 +6,8 @@
 .ios-demo {
   --ios-blue: #007aff;
   --ios-blue-soft: #e5f0ff;
-  --ios-green: #34c759;
-  --ios-green-soft: #e3f8e8;
+  --ios-green: #007aff;
+  --ios-green-soft: #e5f0ff;
   --ios-orange: #ff9500;
   --ios-orange-soft: #fff2e0;
   --ios-red: #ff3b30;
@@ -383,7 +383,7 @@
 
 .ios-tag.green {
   background: var(--ios-green-soft);
-  color: #248a3d;
+  color: #0060df;
 }
 
 .ios-tag.orange {

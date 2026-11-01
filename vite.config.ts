@@ -13,8 +13,8 @@ export default defineConfig({
         short_name: 'FlowTask',
         description: 'Tarefas de casa com preço, saldo semanal e pagamento no fim de semana.',
         lang: 'pt-PT',
-        theme_color: '#1f7a5a',
-        background_color: '#f4f6f4',
+        theme_color: '#007aff',
+        background_color: '#f2f2f7',
         display: 'standalone',
         start_url: '/',
         icons: [
