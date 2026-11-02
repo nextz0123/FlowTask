@@ -56,6 +56,15 @@ export interface DataStore {
   ): Promise<void>
   /** Chefe marca o aviso como visto. */
   markReminderSeen(session: Session, reminderId: string): Promise<void>
+  /** Guarda a subscrição de push deste aparelho. */
+  savePushSubscription(
+    session: Session,
+    input: { endpoint: string; p256dh: string; auth: string },
+  ): Promise<void>
+  /** Remove a subscrição de push deste aparelho. */
+  removePushSubscription(session: Session, endpoint: string): Promise<void>
+  /** Diz se este aparelho tem notificações ativas. */
+  pushStatus(session: Session, endpoint: string): Promise<boolean>
 }
 
 const uid = () =>
@@ -256,6 +265,19 @@ const demoStore: DataStore = {
       writeDemo(db)
     }
   },
+
+  // No modo demo não há servidor de push: guardamos localmente para a UI funcionar.
+  async savePushSubscription(_session, input) {
+    localStorage.setItem('flowtask-push-demo', input.endpoint)
+  },
+
+  async removePushSubscription() {
+    localStorage.removeItem('flowtask-push-demo')
+  },
+
+  async pushStatus(_session, endpoint) {
+    return localStorage.getItem('flowtask-push-demo') === endpoint
+  },
 }
 
 /* ------------------------------------------------------------------ */
@@ -375,6 +397,35 @@ const cloudStore: DataStore = {
       p_reminder_id: reminderId,
     })
     check(error)
+  },
+
+  async savePushSubscription(session, input) {
+    const { error } = await supabase!.rpc('app_save_push_subscription', {
+      p_code: session.code,
+      p_member_id: session.memberId,
+      p_role: session.role,
+      p_endpoint: input.endpoint,
+      p_p256dh: input.p256dh,
+      p_auth: input.auth,
+    })
+    check(error)
+  },
+
+  async removePushSubscription(session, endpoint) {
+    const { error } = await supabase!.rpc('app_remove_push_subscription', {
+      p_code: session.code,
+      p_endpoint: endpoint,
+    })
+    check(error)
+  },
+
+  async pushStatus(session, endpoint) {
+    const { data, error } = await supabase!.rpc('app_push_status', {
+      p_code: session.code,
+      p_endpoint: endpoint,
+    })
+    check(error)
+    return Boolean(data)
   },
 }
 

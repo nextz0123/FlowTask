@@ -16,6 +16,8 @@ import { PaymentModal } from './PaymentModal'
 import { History } from './History'
 import { DeclineModal } from './DeclineModal'
 import { ConfirmDoneModal } from './ConfirmDoneModal'
+import { PushSettings } from './PushSettings'
+import { notifyPaymentRequest, notifyTaskDeclined, notifyTaskDone } from '../lib/notify'
 
 // O painel do chefe (com gráficos) só é descarregado quando é preciso.
 const AdminDashboard = lazy(() =>
@@ -94,6 +96,8 @@ export function Dashboard({ session, onLogout }: Props) {
       })
       setReminderSent(true)
       await refresh()
+      // Avisa o chefe por notificação (não bloqueia se falhar)
+      void notifyPaymentRequest(session.code, unpaid)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Não foi possível avisar o chefe.')
     } finally {
@@ -360,6 +364,8 @@ export function Dashboard({ session, onLogout }: Props) {
               💡 O lembrete para pagar aparece ao fim de semana. Podes pagar a qualquer momento.
             </p>
           )}
+
+          <PushSettings session={session} />
         </>
       ) : (
         <History tasks={tasks} payments={snapshot?.payments ?? []} />
@@ -377,8 +383,12 @@ export function Dashboard({ session, onLogout }: Props) {
           task={decliningTask}
           onClose={() => setDecliningTask(null)}
           onDone={() => {
+            const title = decliningTask.title
             setDecliningTask(null)
-            void refresh()
+            void (async () => {
+              await refresh()
+              void notifyTaskDeclined(session.code, title, 'ver na app')
+            })()
           }}
         />
       )}
@@ -396,6 +406,7 @@ export function Dashboard({ session, onLogout }: Props) {
                 await store.completeTask(session, task.id)
                 await refresh()
                 setConfirmingTask(null)
+                void notifyTaskDone(session.code, task.title)
               } catch (err) {
                 setError(err instanceof Error ? err.message : 'Não foi possível marcar a tarefa.')
               } finally {

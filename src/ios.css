@@ -1177,6 +1177,58 @@ table.data tbody tr:hover {
   }
 }
 
+/* ---------- Notificações ---------- */
+
+.push-box {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  margin-bottom: 14px;
+}
+
+.push-box.on {
+  box-shadow: inset 0 0 0 2px var(--ios-blue);
+}
+
+.push-head {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.push-icon {
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.push-head b {
+  display: block;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.push-head p {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.push-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.push-error {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--ios-red);
+}
+
 /* ---------- Ajustes de ecrã pequeno ---------- */
 @media (max-width: 560px) {
   .hero .amount {

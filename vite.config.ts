@@ -33,6 +33,7 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // Service worker próprio (src/sw.ts) para receber notificações push
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         navigateFallbackDenylist: [/^\/api/],
         // Ativa a versão nova imediatamente, sem esperar que o utilizador feche a app
@@ -50,6 +51,12 @@ export default defineConfig({
             },
           },
         ],
+      },
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
+      injectManifest: {
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
       },
     }),
   ],

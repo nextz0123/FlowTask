@@ -5,7 +5,7 @@ import { formatEuro, toISODate } from '../lib/week'
 
 interface Props {
   session: Session
-  onCreated: () => void
+  onCreated: (task: { title: string; priceCents: number }) => void
 }
 
 /** Valores rápidos (em cêntimos). */
@@ -85,17 +85,18 @@ export function NewTaskForm({ session, onCreated }: Props) {
     setBusy(true)
     setError(null)
     try {
+      const created = { title: title.trim(), priceCents: cents }
       await store.createTask(session, {
-        title: title.trim(),
+        title: created.title,
         description: description.trim() || null,
-        priceCents: cents,
+        priceCents: created.priceCents,
         dueDate: dueDate || null,
       })
       setTitle('')
       setDescription('')
       setPrice('')
       setDueDate('')
-      onCreated()
+      onCreated(created)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Não foi possível criar a tarefa.')
     } finally {

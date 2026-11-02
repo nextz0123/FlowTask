@@ -79,6 +79,9 @@ const required = [
   'app_pay_week',
   'app_send_reminder',
   'app_mark_reminder_seen',
+  'app_save_push_subscription',
+  'app_remove_push_subscription',
+  'app_push_status',
 ]
 const defined = new Set(
   [...sql.matchAll(/create or replace function public\.(\w+)/gi)].map((m) => m[1].toLowerCase()),

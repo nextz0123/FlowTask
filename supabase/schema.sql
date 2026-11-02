@@ -76,6 +76,20 @@ create table if not exists public.reminders (
 
 create index if not exists reminders_household_idx on public.reminders (household_id, created_at desc);
 
+-- Subscrições de notificações push (uma por aparelho)
+create table if not exists public.push_subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  household_id uuid not null references public.households (id) on delete cascade,
+  member_id uuid references public.members (id) on delete cascade,
+  role text not null check (role in ('chefe', 'trabalhador')),
+  endpoint text not null unique,
+  p256dh text not null,
+  auth text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists push_subs_household_idx on public.push_subscriptions (household_id, role);
+
 -- ---------- Segurança (RLS): tabelas fechadas ao público ----------
 
 alter table public.households enable row level security;
@@ -83,6 +97,7 @@ alter table public.members enable row level security;
 alter table public.tasks enable row level security;
 alter table public.payments enable row level security;
 alter table public.reminders enable row level security;
+alter table public.push_subscriptions enable row level security;
 
 -- ---------- Função: criar família ----------
 create or replace function public.create_household(p_name text, p_code text)
@@ -374,6 +389,84 @@ begin
 end;
 $$;
 
+-- ---------- Notificações push ----------
+
+-- Guarda/atualiza a subscrição de push de um aparelho.
+create or replace function public.app_save_push_subscription(
+  p_code text,
+  p_member_id uuid,
+  p_role text,
+  p_endpoint text,
+  p_p256dh text,
+  p_auth text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_household uuid;
+begin
+  select h.id into v_household from households h
+  where upper(h.invite_code) = upper(trim(p_code));
+  if v_household is null then raise exception 'Código de família inválido.'; end if;
+  if p_role not in ('chefe', 'trabalhador') then raise exception 'Papel inválido.'; end if;
+
+  insert into push_subscriptions (household_id, member_id, role, endpoint, p256dh, auth)
+  values (v_household, p_member_id, p_role, p_endpoint, p_p256dh, p_auth)
+  on conflict (endpoint) do update
+    set household_id = excluded.household_id,
+        member_id = excluded.member_id,
+        role = excluded.role,
+        p256dh = excluded.p256dh,
+        auth = excluded.auth;
+end;
+$$;
+
+-- Remove a subscrição (quando o utilizador desliga as notificações).
+create or replace function public.app_remove_push_subscription(
+  p_code text,
+  p_endpoint text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_household uuid;
+begin
+  select h.id into v_household from households h
+  where upper(h.invite_code) = upper(trim(p_code));
+  if v_household is null then raise exception 'Código de família inválido.'; end if;
+
+  delete from push_subscriptions
+  where endpoint = p_endpoint and household_id = v_household;
+end;
+$$;
+
+-- Diz se este aparelho tem notificações ativas.
+create or replace function public.app_push_status(p_code text, p_endpoint text)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_household uuid;
+begin
+  select h.id into v_household from households h
+  where upper(h.invite_code) = upper(trim(p_code));
+  if v_household is null then return false; end if;
+
+  return exists (
+    select 1 from push_subscriptions
+    where endpoint = p_endpoint and household_id = v_household
+  );
+end;
+$$;
+
 -- ---------- Permissões ----------
 revoke all on function public.create_household(text, text) from public;
 revoke all on function public.join_household(text, text, text) from public;
@@ -385,6 +478,9 @@ revoke all on function public.app_delete_task(text, uuid) from public;
 revoke all on function public.app_pay_week(text, date, uuid[], integer, text, text) from public;
 revoke all on function public.app_send_reminder(text, uuid, date, integer, text) from public;
 revoke all on function public.app_mark_reminder_seen(text, uuid) from public;
+revoke all on function public.app_save_push_subscription(text, uuid, text, text, text, text) from public;
+revoke all on function public.app_remove_push_subscription(text, text) from public;
+revoke all on function public.app_push_status(text, text) from public;
 
 grant execute on function public.create_household(text, text) to anon, authenticated;
 grant execute on function public.join_household(text, text, text) to anon, authenticated;
@@ -396,6 +492,9 @@ grant execute on function public.app_delete_task(text, uuid) to anon, authentica
 grant execute on function public.app_pay_week(text, date, uuid[], integer, text, text) to anon, authenticated;
 grant execute on function public.app_send_reminder(text, uuid, date, integer, text) to anon, authenticated;
 grant execute on function public.app_mark_reminder_seen(text, uuid) to anon, authenticated;
+grant execute on function public.app_save_push_subscription(text, uuid, text, text, text, text) to anon, authenticated;
+grant execute on function public.app_remove_push_subscription(text, text) to anon, authenticated;
+grant execute on function public.app_push_status(text, text) to anon, authenticated;
 
 -- ---------- Família inicial (opcional) ----------
 -- Cria a família com o código FAMILIA. Podes mudar o código no painel (Table editor → households).

@@ -18,6 +18,8 @@ import { History } from '../History'
 import { NewTaskForm } from '../NewTaskForm'
 import { PaymentModal } from '../PaymentModal'
 import { TaskRow } from '../TaskRow'
+import { PushSettings } from '../PushSettings'
+import { notifyNewTask } from '../../lib/notify'
 
 type Theme = 'light' | 'dark'
 
@@ -309,6 +311,8 @@ export function AdminDashboard({ session, snapshot, onRefresh, onLogout, error }
               <Panel title="Ganhos por semana" subtitle="Últimas 8 semanas">
                 <EarningsChart data={stats.series} />
               </Panel>
+
+              <PushSettings session={session} />
             </>
           )}
 
@@ -320,9 +324,10 @@ export function AdminDashboard({ session, snapshot, onRefresh, onLogout, error }
                   <Panel title="Nova tarefa" subtitle="O que há para fazer e quanto vale">
                     <NewTaskForm
                       session={session}
-                      onCreated={() => {
+                      onCreated={(task) => {
                         setShowForm(false)
                         void onRefresh()
+                        void notifyNewTask(session.code, task.title, task.priceCents)
                       }}
                     />
                   </Panel>
