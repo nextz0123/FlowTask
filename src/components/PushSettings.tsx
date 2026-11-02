@@ -52,8 +52,28 @@ export function PushSettings({ session }: Props) {
         <div className="push-head">
           <span className="push-icon">🔔</span>
           <div>
-            <b>Notificações</b>
-            <p>Só funcionam com a app ligada à nuvem (Supabase).</p>
+            <b>Notificações desligadas</b>
+            <p>
+              A app está em <b>modo demonstração</b> — faltam as chaves da Supabase. Depois de as
+              configurar, esta opção fica disponível.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (state === 'not-configured') {
+    return (
+      <div className="push-box">
+        <div className="push-head">
+          <span className="push-icon">⚙️</span>
+          <div>
+            <b>Notificações por configurar</b>
+            <p>
+              Falta a chave <code>VITE_VAPID_PUBLIC_KEY</code> no build. Adiciona-a nas variáveis de
+              ambiente da Vercel e faz um deploy novo.
+            </p>
           </div>
         </div>
       </div>
@@ -66,10 +86,10 @@ export function PushSettings({ session }: Props) {
         <div className="push-head">
           <span className="push-icon">🔕</span>
           <div>
-            <b>Notificações indisponíveis</b>
+            <b>Este browser não suporta notificações</b>
             <p>
-              Este browser não suporta notificações. No iPhone, instala a app no ecrã inicial
-              (Partilhar → Adicionar ao Ecrã Principal).
+              No iPhone tens de instalar a app: <b>Safari → Partilhar → Adicionar ao Ecrã
+              Principal</b> e abrir pelo ícone. No PC, usa Chrome ou Edge.
             </p>
           </div>
         </div>

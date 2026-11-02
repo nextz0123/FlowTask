@@ -4,7 +4,8 @@ import type { Session } from '../types'
 const VAPID_PUBLIC = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined
 
 export type PushState =
-  | 'unsupported' // browser não suporta
+  | 'unsupported' // browser não suporta mesmo
+  | 'not-configured' // falta a chave VAPID no build
   | 'denied' // utilizador recusou
   | 'off' // suportado, mas desligado
   | 'on' // ativo
@@ -18,6 +19,11 @@ export function pushSupported(): boolean {
     'PushManager' in window &&
     'Notification' in window
   )
+}
+
+/** A chave VAPID pública está presente no build? */
+export function pushConfigured(): boolean {
+  return Boolean(VAPID_PUBLIC && VAPID_PUBLIC.length > 20)
 }
 
 /** Converte a chave VAPID (base64url) para o formato que o PushManager espera. */
@@ -39,7 +45,8 @@ async function getRegistration(): Promise<ServiceWorkerRegistration | null> {
 /** Estado atual das notificações neste aparelho. */
 export async function getPushState(session: Session): Promise<PushState> {
   if (!isCloudMode) return 'demo'
-  if (!pushSupported() || !VAPID_PUBLIC) return 'unsupported'
+  if (!pushSupported()) return 'unsupported'
+  if (!pushConfigured()) return 'not-configured'
   if (Notification.permission === 'denied') return 'denied'
   if (Notification.permission !== 'granted') return 'off'
 
@@ -58,7 +65,8 @@ export async function getPushState(session: Session): Promise<PushState> {
 /** Pede permissão e ativa as notificações neste aparelho. */
 export async function enablePush(session: Session): Promise<PushState> {
   if (!isCloudMode) return 'demo'
-  if (!pushSupported() || !VAPID_PUBLIC) return 'unsupported'
+  if (!pushSupported()) return 'unsupported'
+  if (!pushConfigured()) return 'not-configured'
 
   const permission = await Notification.requestPermission()
   if (permission !== 'granted') return permission === 'denied' ? 'denied' : 'off'
@@ -66,11 +74,12 @@ export async function enablePush(session: Session): Promise<PushState> {
   const reg = await getRegistration()
   if (!reg) throw new Error('A app ainda não está pronta. Recarrega a página e tenta outra vez.')
 
+  const vapidKey = VAPID_PUBLIC as string
   const sub =
     (await reg.pushManager.getSubscription()) ??
     (await reg.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC),
+      applicationServerKey: urlBase64ToUint8Array(vapidKey),
     }))
 
   const json = sub.toJSON()
