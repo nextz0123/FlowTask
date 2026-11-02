@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Versão maskable: fundo preenche tudo e o símbolo fica dentro da "zona segura" -->
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a84ff"/>
+      <stop offset="100%" stop-color="#0060df"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#g)"/>
+  <g transform="translate(256 256) scale(0.72) translate(-256 -256)">
+    <path d="M256 96l-30 40h60z" fill="#ffffff"/>
+    <path d="M136 176h240M136 336h240" stroke="#ffffff" stroke-width="30" stroke-linecap="round"/>
+    <path d="M176 256h160" stroke="#ffffff" stroke-width="30" stroke-linecap="round"/>
+    <path d="M256 416l30-40h-60z" fill="#ffffff"/>
+  </g>
+</svg>
