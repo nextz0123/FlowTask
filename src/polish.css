@@ -688,3 +688,131 @@ textarea {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* ============================================================
+   FUNÇÕES DE APP DE TELEMÓVEL
+   ============================================================ */
+
+/* ---------- Puxar para atualizar ---------- */
+
+.ptr {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
+  transition: height 0.28s var(--ease);
+}
+
+.ptr-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+  padding-bottom: 12px;
+  transition: color 0.2s var(--tap);
+}
+
+.ptr-icon {
+  font-size: 15px;
+  display: inline-block;
+  transition: transform 0.2s var(--ease);
+}
+
+.ptr-inner.ready {
+  color: var(--brand);
+  font-weight: 600;
+}
+
+.ptr-inner.ready .ptr-icon {
+  transform: rotate(180deg) scale(1.15);
+}
+
+.ptr-inner.spinning .ptr-icon {
+  animation: ft-spin 0.9s linear infinite;
+}
+
+/* ---------- Faixa de aviso "sem internet" ---------- */
+
+.offline-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--gold-soft);
+  border: 1px solid color-mix(in srgb, var(--gold) 35%, transparent);
+  color: #6b5312;
+  border-radius: 14px;
+  padding: 11px 14px;
+  margin-bottom: 14px;
+  font-size: 13.5px;
+  line-height: 1.4;
+  animation: ft-rise 0.3s var(--ease-out) both;
+}
+
+html[data-theme='dark'] .offline-banner {
+  color: #ffd479;
+}
+
+.offline-banner .ob-icon {
+  font-size: 17px;
+}
+
+.offline-banner b {
+  font-weight: 700;
+}
+
+/* ---------- Definições: hora do aviso ---------- */
+
+.settings-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin: 14px 0 8px;
+}
+
+.hour-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 8px;
+}
+
+.hour-chip {
+  background: var(--card);
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  padding: 9px 4px;
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  transition:
+    transform 0.16s var(--tap),
+    background 0.16s var(--tap),
+    border-color 0.16s var(--tap),
+    color 0.16s var(--tap);
+}
+
+.hour-chip:hover {
+  border-color: color-mix(in srgb, var(--brand) 40%, var(--line));
+}
+
+.hour-chip:active {
+  transform: scale(0.95);
+}
+
+.hour-chip.on {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--brand) 30%, transparent);
+}
+
+.settings-note {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: var(--brand-dark);
+  font-weight: 600;
+  animation: ft-rise 0.25s var(--ease-out) both;
+}
+

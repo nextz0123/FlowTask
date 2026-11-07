@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState } from 'react'
 import type { Session } from './types'
 import { loadSession, saveSession } from './lib/store'
+import { cancelDailyReminder } from './lib/local-notify'
 import { Login } from './components/Login'
 import { Dashboard } from './components/Dashboard'
 
@@ -25,6 +26,8 @@ export default function App() {
   }
 
   function handleLogout() {
+    // Cancela o aviso diário agendado no telemóvel
+    void cancelDailyReminder()
     saveSession(null)
     setSession(null)
   }

@@ -20,8 +20,11 @@ import { ConfirmDoneModal } from './ConfirmDoneModal'
 import { PushSettings } from './PushSettings'
 import { VersionTag } from './VersionTag'
 import { WeekProgress } from './WeekProgress'
+import { PullToRefresh } from './PullToRefresh'
+import { AppSettings } from './AppSettings'
 import { notifyPaymentRequest, notifyTaskDeclined, notifyTaskDone } from '../lib/notify'
 import { tapSuccess, tapWarning } from '../lib/native-ui'
+import { cacheAge, isOnline, onConnectionChange, readCache, saveCache } from '../lib/offline'
 
 // O painel do chefe (com gráficos) só é descarregado quando é preciso.
 const AdminDashboard = lazy(() =>
@@ -44,14 +47,28 @@ export function Dashboard({ session, onLogout }: Props) {
   const [decliningTask, setDecliningTask] = useState<Task | null>(null)
   const [confirmingTask, setConfirmingTask] = useState<Task | null>(null)
   const [confirmBusy, setConfirmBusy] = useState(false)
+  // Offline: mostra a última cópia guardada e avisa o utilizador.
+  const [offline, setOffline] = useState(false)
+  const [cacheSavedAt, setCacheSavedAt] = useState<number | null>(null)
 
   const refresh = useCallback(async () => {
     try {
       const data = await store.load(session)
       setSnapshot(data)
       setError(null)
+      setCacheSavedAt(Date.now())
+      saveCache(data)
+      setOffline(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Falha ao carregar os dados.')
+      // Sem rede: usa a última cópia em vez de mostrar ecrã vazio.
+      const cached = readCache<Snapshot>()
+      if (cached) {
+        setSnapshot(cached.data)
+        setCacheSavedAt(cached.savedAt)
+        setOffline(true)
+      } else {
+        setError(err instanceof Error ? err.message : 'Falha ao carregar os dados.')
+      }
     }
   }, [session])
 
@@ -64,10 +81,20 @@ export function Dashboard({ session, onLogout }: Props) {
     }
     document.addEventListener('visibilitychange', onVisible)
     const interval = window.setInterval(() => void refresh(), 30_000)
+
+    // Acompanha a ligação à internet
+    void isOnline().then((up) => setOffline(!up))
+    const stopWatching = onConnectionChange((state) => {
+      setOffline(state === 'offline')
+      // Quando a rede volta, sincroniza logo
+      if (state === 'online') void refresh()
+    })
+
     return () => {
       window.clearTimeout(timer)
       document.removeEventListener('visibilitychange', onVisible)
       window.clearInterval(interval)
+      stopWatching()
     }
   }, [refresh])
 
@@ -172,6 +199,16 @@ export function Dashboard({ session, onLogout }: Props) {
 
       <h1 className="ios-page-title">{tab === 'inicio' ? 'As minhas tarefas' : 'Histórico'}</h1>
 
+      {offline && (
+        <div className="offline-banner">
+          <span className="ob-icon">📴</span>
+          <div>
+            <b>Sem internet.</b> Estás a ver a última cópia
+            {cacheSavedAt ? ` (${cacheAge(cacheSavedAt)})` : ''}. As alterações ficam para depois.
+          </div>
+        </div>
+      )}
+
       {error && (
         <div className="reminder" style={{ background: 'var(--danger-soft)', borderColor: '#f3b7b0' }}>
           <span className="icon">⚠️</span>
@@ -179,6 +216,7 @@ export function Dashboard({ session, onLogout }: Props) {
         </div>
       )}
 
+      <PullToRefresh onRefresh={refresh}>
       <section className="hero">
         <div className="label">{isChefe ? 'Falta pagar' : 'Ainda vais receber'}</div>
         <div className="amount">{formatEuro(unpaid)}</div>
@@ -388,11 +426,13 @@ export function Dashboard({ session, onLogout }: Props) {
           )}
 
           <PushSettings session={session} />
+          <AppSettings pendingCount={pendingTasks.length} />
         </>
       ) : (
         <History tasks={tasks} payments={snapshot?.payments ?? []} />
       )}
       </div>
+      </PullToRefresh>
 
       <p className="footer-note">
         {isCloudMode
