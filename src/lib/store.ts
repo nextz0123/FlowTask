@@ -65,6 +65,10 @@ export interface DataStore {
   removePushSubscription(session: Session, endpoint: string): Promise<void>
   /** Diz se este aparelho tem notificações ativas. */
   pushStatus(session: Session, endpoint: string): Promise<boolean>
+  /** Guarda o token FCM do APK Android (guardado no campo "endpoint"). */
+  saveNativePushToken(session: Session, token: string): Promise<void>
+  /** Remove o token FCM deste aparelho. */
+  removeNativePushToken(session: Session): Promise<void>
 }
 
 const uid = () =>
@@ -278,6 +282,14 @@ const demoStore: DataStore = {
   async pushStatus(_session, endpoint) {
     return localStorage.getItem('flowtask-push-demo') === endpoint
   },
+
+  async saveNativePushToken(_session, token) {
+    localStorage.setItem('flowtask-fcm-demo', token)
+  },
+
+  async removeNativePushToken() {
+    localStorage.removeItem('flowtask-fcm-demo')
+  },
 }
 
 /* ------------------------------------------------------------------ */
@@ -426,6 +438,31 @@ const cloudStore: DataStore = {
     })
     check(error)
     return Boolean(data)
+  },
+
+  async saveNativePushToken(session, token) {
+    const { error } = await supabase!.rpc('app_save_push_subscription', {
+      p_code: session.code,
+      p_member_id: session.memberId,
+      p_role: session.role,
+      p_endpoint: token,
+      p_p256dh: '',
+      p_auth: '',
+      p_kind: 'fcm',
+    })
+    check(error)
+    localStorage.setItem('flowtask-fcm-token', token)
+  },
+
+  async removeNativePushToken(session) {
+    const token = localStorage.getItem('flowtask-fcm-token')
+    if (!token) return
+    const { error } = await supabase!.rpc('app_remove_push_subscription', {
+      p_code: session.code,
+      p_endpoint: token,
+    })
+    check(error)
+    localStorage.removeItem('flowtask-fcm-token')
   },
 }
 

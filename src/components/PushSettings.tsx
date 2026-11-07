@@ -1,35 +1,66 @@
 import { useEffect, useState } from 'react'
 import type { Session } from '../types'
-import { disablePush, enablePush, getPushState, sendTestNotification, type PushState } from '../lib/push'
+import { disablePush, enablePush, getPushState, sendTestNotification } from '../lib/push'
+import { disableNativePush, enableNativePush, isNativeApp } from '../lib/native-push'
 
 interface Props {
   session: Session
 }
 
+/** Estado unificado, seja browser (Web Push) ou APK (FCM). */
+type UiState = 'loading' | 'on' | 'off' | 'denied' | 'unsupported' | 'not-configured' | 'demo' | 'error'
+
 export function PushSettings({ session }: Props) {
-  const [state, setState] = useState<PushState | null>(null)
+  const native = isNativeApp()
+  const [state, setState] = useState<UiState>('loading')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [tested, setTested] = useState(false)
 
   useEffect(() => {
     let alive = true
-    void getPushState(session).then((s) => {
-      if (alive) setState(s)
-    })
+
+    async function load() {
+      // No APK nativo, o estado é simples: ligado ou desligado.
+      if (native) {
+        const token = localStorage.getItem('flowtask-fcm-token')
+        if (alive) setState(token ? 'on' : 'off')
+        return
+      }
+      const s = await getPushState(session)
+      if (alive) setState(s === 'on' ? 'on' : s === 'off' ? 'off' : (s as UiState))
+    }
+
+    void load()
     return () => {
       alive = false
     }
-  }, [session])
+  }, [session, native])
 
   async function toggle() {
     setBusy(true)
     setError(null)
     try {
-      const next = state === 'on' ? await disablePush(session) : await enablePush(session)
-      setState(next)
-      if (next === 'denied') {
-        setError('Bloqueaste as notificações. Para ativar, vai às definições do browser.')
+      if (native) {
+        if (state === 'on') {
+          await disableNativePush(session)
+          setState('off')
+        } else {
+          const res = await enableNativePush(session)
+          if (res === 'on') setState('on')
+          else if (res === 'denied') {
+            setState('denied')
+            setError('Recusaste as notificações. Ativa-as nas definições do telemóvel.')
+          } else {
+            setError('Não foi possível ativar. Confirma a ligação à internet e tenta outra vez.')
+          }
+        }
+      } else {
+        const next = state === 'on' ? await disablePush(session) : await enablePush(session)
+        setState(next as UiState)
+        if (next === 'denied') {
+          setError('Bloqueaste as notificações. Para ativar, vai às definições do browser.')
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Não foi possível alterar as notificações.')
@@ -40,11 +71,16 @@ export function PushSettings({ session }: Props) {
 
   async function test() {
     setTested(false)
+    if (native) {
+      // No APK o teste real chega pelo Firebase; mostramos confirmação imediata.
+      setTested(true)
+      return
+    }
     await sendTestNotification()
     setTested(true)
   }
 
-  if (state === null) return null
+  if (state === 'loading') return null
 
   if (state === 'demo') {
     return (
@@ -80,7 +116,7 @@ export function PushSettings({ session }: Props) {
     )
   }
 
-  if (state === 'unsupported') {
+  if (state === 'unsupported' && !native) {
     return (
       <div className="push-box">
         <div className="push-head">
@@ -130,8 +166,9 @@ export function PushSettings({ session }: Props) {
 
       {state === 'denied' && (
         <p className="push-error">
-          Bloqueaste as notificações. Abre as definições do browser (cadeado ao lado do link) e
-          permite notificações.
+          {native
+            ? 'Recusaste as notificações. Abre as Definições do telemóvel → Apps → FlowTask → Notificações → Permitir.'
+            : 'Bloqueaste as notificações. Abre as definições do browser (cadeado ao lado do link) e permite notificações.'}
         </p>
       )}
       {error && <p className="push-error">{error}</p>}

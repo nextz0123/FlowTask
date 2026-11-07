@@ -120,6 +120,21 @@ export function totalUnpaid(tasks: Task[]): number {
     .reduce((sum, t) => sum + t.price_cents, 0)
 }
 
+/**
+ * A que semana pertence uma tarefa.
+ * Se já está feita, conta para a semana em que foi concluída.
+ * Se ainda está por fazer, conta para a semana em que foi criada.
+ */
+export function taskWeekStart(task: Task): string {
+  const stamp = task.completed_at ?? task.created_at
+  return weekStartOf(new Date(stamp))
+}
+
+/** Tarefas que pertencem a uma semana (ver taskWeekStart). */
+export function tasksInWeek(tasks: Task[], weekStart: string): Task[] {
+  return tasks.filter((t) => taskWeekStart(t) === weekStart)
+}
+
 /** Saldo já recebido (todas as semanas). */
 export function totalReceived(tasks: Task[]): number {
   return tasks

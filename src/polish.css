@@ -1,0 +1,369 @@
+/* ============================================================
+   FlowTask — Polimento da interface
+   Camada aplicada por cima de index.css, admin.css e ios.css.
+   Só aparência: espaçamento, tipografia, sombras, animações.
+   ============================================================ */
+
+/* ---------- Movimento suave e consistente ---------- */
+
+:root {
+  --ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --tap: cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+/* Respeita quem prefere menos animações (acessibilidade) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+body {
+  -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior-y: none;
+}
+
+/* ---------- Cartões: entrada suave ---------- */
+
+@keyframes ft-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.card,
+.hero,
+.reminder,
+.push-box,
+.task {
+  animation: ft-rise 0.32s var(--ease-out) both;
+}
+
+/* Escalona a entrada das linhas de tarefas (as primeiras 8). */
+.tasks .task:nth-child(1) { animation-delay: 0ms; }
+.tasks .task:nth-child(2) { animation-delay: 30ms; }
+.tasks .task:nth-child(3) { animation-delay: 60ms; }
+.tasks .task:nth-child(4) { animation-delay: 90ms; }
+.tasks .task:nth-child(5) { animation-delay: 120ms; }
+.tasks .task:nth-child(6) { animation-delay: 150ms; }
+.tasks .task:nth-child(7) { animation-delay: 180ms; }
+.tasks .task:nth-child(8) { animation-delay: 210ms; }
+
+/* ---------- Linhas de tarefa: mais respiração e toque ---------- */
+
+.task {
+  padding: 14px;
+  border-radius: 16px;
+  transition:
+    transform 0.16s var(--tap),
+    box-shadow 0.16s var(--tap),
+    background 0.16s var(--tap),
+    border-color 0.16s var(--tap);
+}
+
+.task:hover {
+  border-color: color-mix(in srgb, var(--brand) 28%, var(--line));
+}
+
+.task:active {
+  transform: scale(0.988);
+}
+
+.task .title {
+  font-size: 15.5px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
+.task .price {
+  font-size: 15.5px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.task .meta {
+  font-size: 12.5px;
+  letter-spacing: -0.005em;
+}
+
+/* ---------- Botão de marcar: alvo maior e retorno visual ---------- */
+
+.check {
+  transition:
+    transform 0.2s var(--ease),
+    background 0.2s var(--ease),
+    border-color 0.2s var(--ease),
+    color 0.2s var(--ease);
+}
+
+button.check:hover {
+  transform: scale(1.08);
+}
+
+button.check:active {
+  transform: scale(0.9);
+}
+
+/* Pequeno "pop" quando a tarefa fica feita */
+@keyframes ft-pop {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.22); }
+  100% { transform: scale(1); }
+}
+
+.check.on {
+  animation: ft-pop 0.34s var(--ease-out);
+}
+
+/* ---------- Badges: mais legíveis ---------- */
+
+.badge {
+  font-weight: 650;
+  letter-spacing: -0.005em;
+}
+
+/* ---------- Botões: altura mínima de toque (iOS: 44px) ---------- */
+
+.btn {
+  min-height: 44px;
+  transition:
+    transform 0.16s var(--tap),
+    background 0.16s var(--tap),
+    opacity 0.16s var(--tap);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.975);
+}
+
+.btn.small {
+  min-height: 36px;
+}
+
+.btn:focus-visible,
+.check:focus-visible,
+.tabs button:focus-visible,
+.ios-tabbar-app button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--brand) 45%, transparent);
+  outline-offset: 2px;
+}
+
+/* ---------- Hero do saldo: mais presença ---------- */
+
+.hero {
+  border-radius: 24px;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Brilho subtil no canto — dá profundidade sem poluir */
+.hero::after {
+  content: '';
+  position: absolute;
+  top: -60px;
+  right: -40px;
+  width: 190px;
+  height: 190px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.22), transparent 70%);
+  pointer-events: none;
+}
+
+.hero .amount {
+  font-size: 44px;
+  font-weight: 820;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.05;
+}
+
+.hero .label {
+  font-weight: 600;
+  letter-spacing: 0.07em;
+}
+
+.hero .split b {
+  font-size: 18px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Títulos de página e secção ---------- */
+
+.ios-page-title {
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.card h2 {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+/* ---------- Campos de formulário: foco mais claro ---------- */
+
+.field input,
+.field textarea,
+.field select {
+  transition:
+    border-color 0.16s var(--tap),
+    box-shadow 0.16s var(--tap);
+}
+
+/* ---------- Aviso de fim de semana: mais evidente ---------- */
+
+.reminder {
+  border-radius: 18px;
+}
+
+.reminder strong {
+  font-size: 15.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* ---------- Navegação inferior: mais tátil ---------- */
+
+.ios-tabbar-app button,
+.tabs button {
+  transition:
+    color 0.16s var(--tap),
+    opacity 0.16s var(--tap),
+    transform 0.16s var(--tap);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ios-tabbar-app button:active,
+.tabs button:active {
+  transform: scale(0.94);
+}
+
+/* ---------- Estado vazio: mais acolhedor ---------- */
+
+.empty {
+  line-height: 1.5;
+}
+
+.empty .big {
+  display: block;
+  margin-bottom: 6px;
+}
+
+/* ---------- Etiqueta de versão ---------- */
+
+.version-tag {
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  margin: 18px 0 0;
+  letter-spacing: 0.01em;
+}
+
+.version-tag b {
+  color: var(--ink);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.version-tag.compact {
+  margin: 10px 0 0;
+  font-size: 11.5px;
+}
+
+.version-tag span {
+  opacity: 0.75;
+}
+
+/* ---------- Barra de progresso da semana ---------- */
+
+.week-progress {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.week-progress .wp-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 13px;
+  margin-bottom: 8px;
+  opacity: 0.95;
+}
+
+.week-progress .wp-head b {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.wp-track {
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.25);
+  overflow: hidden;
+}
+
+.wp-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: #ffffff;
+  width: 0;
+  transition: width 0.7s var(--ease-out);
+}
+
+/* Versão fora do hero (painel do chefe, fundo claro) */
+.week-progress.on-light {
+  border-top-color: var(--line);
+}
+
+.week-progress.on-light .wp-track {
+  background: color-mix(in srgb, var(--brand) 18%, transparent);
+}
+
+.week-progress.on-light .wp-fill {
+  background: var(--brand);
+}
+
+/* ---------- Ecrãs pequenos ---------- */
+
+@media (max-width: 560px) {
+  .hero {
+    padding: 20px;
+    border-radius: 22px;
+  }
+
+  .hero .amount {
+    font-size: 38px;
+  }
+
+  .task {
+    padding: 13px;
+  }
+}
+
+/* ---------- Ecrãs grandes: aproveitar melhor o espaço ---------- */
+
+@media (min-width: 1000px) {
+  .app {
+    max-width: 760px;
+  }
+}

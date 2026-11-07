@@ -7,6 +7,7 @@ import {
   formatEuro,
   formatWeekLabel,
   isWeekend,
+  tasksInWeek,
   totalUnpaid,
 } from '../../lib/week'
 import { buildAdminStats } from '../../lib/stats'
@@ -19,6 +20,8 @@ import { NewTaskForm } from '../NewTaskForm'
 import { PaymentModal } from '../PaymentModal'
 import { TaskRow } from '../TaskRow'
 import { PushSettings } from '../PushSettings'
+import { VersionTag } from '../VersionTag'
+import { WeekProgress } from '../WeekProgress'
 import { notifyNewTask } from '../../lib/notify'
 
 type Theme = 'light' | 'dark'
@@ -91,6 +94,14 @@ export function AdminDashboard({ session, snapshot, onRefresh, onLogout, error }
   const toDo = tasks.filter((t) => t.status === 'pendente')
   const done = tasks.filter((t) => t.status === 'feita')
   const declined = stats.declined
+
+  // Progresso da semana em curso.
+  const weekTasks = useMemo(() => tasksInWeek(tasks, weekStart), [tasks, weekStart])
+  const weekDoneTasks = weekTasks.filter((t) => t.status === 'feita' || t.status === 'paga')
+  const weekDoneCents = weekDoneTasks.reduce((sum, t) => sum + t.price_cents, 0)
+  const weekTotalCents = weekTasks
+    .filter((t) => t.status !== 'recusada')
+    .reduce((sum, t) => sum + t.price_cents, 0)
 
   // Avisos do trabalhador ainda não vistos
   const unseenReminders = (snapshot.reminders ?? []).filter((r) => !r.seen_at)
@@ -308,11 +319,28 @@ export function AdminDashboard({ session, snapshot, onRefresh, onLogout, error }
                 </Panel>
               )}
 
+              <Panel title="Progresso da semana" subtitle="Quanto já está feito do combinado">
+                {weekTasks.length === 0 ? (
+                  <EmptyState icon="📋">
+                    Ainda não criaste tarefas esta semana.
+                  </EmptyState>
+                ) : (
+                  <WeekProgress
+                    doneCents={weekDoneCents}
+                    totalCents={weekTotalCents}
+                    doneCount={weekDoneTasks.length}
+                    totalCount={weekTasks.filter((t) => t.status !== 'recusada').length}
+                    onLight
+                  />
+                )}
+              </Panel>
+
               <Panel title="Ganhos por semana" subtitle="Últimas 8 semanas">
                 <EarningsChart data={stats.series} />
               </Panel>
 
               <PushSettings session={session} />
+              <VersionTag />
             </>
           )}
 

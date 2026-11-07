@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "992774490089",
+    "project_id": "flowtask-59eed",
+    "storage_bucket": "flowtask-59eed.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:992774490089:android:1d99df178885cf4abead78",
+        "android_client_info": {
+          "package_name": "pt.flowtask.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC0caXS62uag5CZcUP89NOA-Y9gIYbikpI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

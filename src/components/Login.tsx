@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Role, Session } from '../types'
 import { isCloudMode, store } from '../lib/store'
+import { VersionTag } from './VersionTag'
 
 interface Props {
   onJoined: (session: Session) => void
@@ -106,6 +107,8 @@ export function Login({ onJoined }: Props) {
           O código é o mesmo em todos os aparelhos da família. Podes vê-lo na app da tua mãe, no
           topo do ecrã.
         </p>
+
+        <VersionTag />
       </div>
     </div>
   )

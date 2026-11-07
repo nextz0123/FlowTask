@@ -77,16 +77,23 @@ create table if not exists public.reminders (
 create index if not exists reminders_household_idx on public.reminders (household_id, created_at desc);
 
 -- Subscrições de notificações push (uma por aparelho)
+-- kind = 'web'  -> subscrição Web Push (browser / PWA). Usa endpoint + p256dh + auth.
+-- kind = 'fcm'  -> token do APK Android (Firebase). O token fica em "endpoint".
 create table if not exists public.push_subscriptions (
   id uuid primary key default gen_random_uuid(),
   household_id uuid not null references public.households (id) on delete cascade,
   member_id uuid references public.members (id) on delete cascade,
   role text not null check (role in ('chefe', 'trabalhador')),
+  kind text not null default 'web' check (kind in ('web', 'fcm')),
   endpoint text not null unique,
-  p256dh text not null,
-  auth text not null,
+  p256dh text not null default '',
+  auth text not null default '',
   created_at timestamptz not null default now()
 );
+
+-- Projetos criados antes do APK: acrescenta a coluna sem apagar dados.
+alter table public.push_subscriptions
+  add column if not exists kind text not null default 'web';
 
 create index if not exists push_subs_household_idx on public.push_subscriptions (household_id, role);
 
@@ -398,7 +405,8 @@ create or replace function public.app_save_push_subscription(
   p_role text,
   p_endpoint text,
   p_p256dh text,
-  p_auth text
+  p_auth text,
+  p_kind text default 'web'
 )
 returns void
 language plpgsql
@@ -412,13 +420,15 @@ begin
   where upper(h.invite_code) = upper(trim(p_code));
   if v_household is null then raise exception 'Código de família inválido.'; end if;
   if p_role not in ('chefe', 'trabalhador') then raise exception 'Papel inválido.'; end if;
+  if p_kind not in ('web', 'fcm') then raise exception 'Tipo de notificação inválido.'; end if;
 
-  insert into push_subscriptions (household_id, member_id, role, endpoint, p256dh, auth)
-  values (v_household, p_member_id, p_role, p_endpoint, p_p256dh, p_auth)
+  insert into push_subscriptions (household_id, member_id, role, kind, endpoint, p256dh, auth)
+  values (v_household, p_member_id, p_role, p_kind, p_endpoint, coalesce(p_p256dh, ''), coalesce(p_auth, ''))
   on conflict (endpoint) do update
     set household_id = excluded.household_id,
         member_id = excluded.member_id,
         role = excluded.role,
+        kind = excluded.kind,
         p256dh = excluded.p256dh,
         auth = excluded.auth;
 end;

@@ -7,6 +7,7 @@ import {
   formatWeekLabel,
   isWeekend,
   summarizeWeeks,
+  tasksInWeek,
   totalReceived,
   totalUnpaid,
 } from '../lib/week'
@@ -17,6 +18,8 @@ import { History } from './History'
 import { DeclineModal } from './DeclineModal'
 import { ConfirmDoneModal } from './ConfirmDoneModal'
 import { PushSettings } from './PushSettings'
+import { VersionTag } from './VersionTag'
+import { WeekProgress } from './WeekProgress'
 import { notifyPaymentRequest, notifyTaskDeclined, notifyTaskDone } from '../lib/notify'
 
 // O painel do chefe (com gráficos) só é descarregado quando é preciso.
@@ -79,6 +82,14 @@ export function Dashboard({ session, onLogout }: Props) {
   const weekend = isWeekend()
   const toPayThisWeek = currentWeek?.pendingCents ?? 0
   const showReminder = weekend && toPayThisWeek > 0
+
+  // Progresso da semana: quanto do combinado já está feito.
+  const weekTasks = useMemo(() => tasksInWeek(tasks, weekStart), [tasks, weekStart])
+  const weekDoneTasks = weekTasks.filter((t) => t.status === 'feita' || t.status === 'paga')
+  const weekDoneCents = weekDoneTasks.reduce((sum, t) => sum + t.price_cents, 0)
+  const weekTotalCents = weekTasks
+    .filter((t) => t.status !== 'recusada')
+    .reduce((sum, t) => sum + t.price_cents, 0)
 
   // Aviso ao chefe: já foi enviado para esta semana?
   const reminders = snapshot?.reminders ?? []
@@ -186,6 +197,13 @@ export function Dashboard({ session, onLogout }: Props) {
             <b>{pendingTasks.length}</b>
           </div>
         </div>
+
+        <WeekProgress
+          doneCents={weekDoneCents}
+          totalCents={weekTotalCents}
+          doneCount={weekDoneTasks.length}
+          totalCount={weekTasks.filter((t) => t.status !== 'recusada').length}
+        />
       </section>
 
       {showReminder && (
@@ -376,6 +394,8 @@ export function Dashboard({ session, onLogout }: Props) {
           ? 'Sincronizado na nuvem entre todos os aparelhos da família.'
           : 'Modo demonstração — dados apenas neste aparelho.'}
       </p>
+
+      <VersionTag />
 
       {decliningTask && (
         <DeclineModal
