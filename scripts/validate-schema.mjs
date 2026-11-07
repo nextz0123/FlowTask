@@ -79,6 +79,7 @@ const required = [
   'app_pay_week',
   'app_send_reminder',
   'app_mark_reminder_seen',
+  'app_rename_member',
   'app_save_push_subscription',
   'app_remove_push_subscription',
   'app_push_status',

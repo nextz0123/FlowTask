@@ -424,8 +424,11 @@ html[data-theme='dark'] {
   }
 }
 
+/* O menu lateral do topo só faz sentido em ecrãs grandes.
+   Nota: em ecrãs pequenos usamos a barra inferior, por isso o botão ☰
+   esconde-se — mas "hide-mobile" NUNCA pode esconder a navegação toda. */
 @media (min-width: 901px) {
-  .hide-mobile {
+  .only-mobile {
     display: none !important;
   }
 }
@@ -443,6 +446,8 @@ html[data-theme='dark'] {
   }
   .page {
     padding: 16px;
+    /* espaço para a barra inferior não tapar o conteúdo */
+    padding-bottom: 96px;
   }
   .topnav {
     padding: 10px 16px;
@@ -452,6 +457,85 @@ html[data-theme='dark'] {
   }
   .bigstat-value {
     font-size: 32px;
+  }
+}
+
+/* ---------- Barra de navegação inferior (telemóvel) ---------- */
+
+.admin-tabbar {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .admin-tabbar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    display: flex;
+    justify-content: space-around;
+    align-items: stretch;
+    gap: 2px;
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+    background: color-mix(in srgb, var(--card) 92%, transparent);
+    backdrop-filter: blur(14px);
+    border-top: 1px solid var(--line);
+  }
+
+  .admin-tabbar button {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 2px;
+    border-radius: 12px;
+    transition:
+      color 0.16s cubic-bezier(0.4, 0, 0.6, 1),
+      background 0.16s cubic-bezier(0.4, 0, 0.6, 1),
+      transform 0.16s cubic-bezier(0.4, 0, 0.6, 1);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .admin-tabbar button .ico {
+    font-size: 19px;
+    line-height: 1;
+    position: relative;
+  }
+
+  .admin-tabbar button:active {
+    transform: scale(0.94);
+  }
+
+  .admin-tabbar button.on {
+    color: var(--brand);
+  }
+
+  .admin-tabbar button.on .ico {
+    animation: ft-icon-pop 0.36s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .admin-tabbar .tab-badge {
+    position: absolute;
+    top: -5px;
+    right: -9px;
+    min-width: 17px;
+    height: 17px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: var(--danger);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    display: grid;
+    place-items: center;
+    line-height: 1;
   }
 }
 
@@ -754,4 +838,341 @@ table.data th.num {
   width: 8px;
   height: 8px;
   border-radius: 3px;
+}
+
+/* ============================================================
+   SECÇÃO CONTA
+   ============================================================ */
+
+/* ---------- Identidade ---------- */
+
+.account-id {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.account-avatar {
+  width: 58px;
+  height: 58px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--brand) 0%, color-mix(in srgb, var(--brand) 65%, #000) 100%);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 23px;
+  font-weight: 700;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--brand) 28%, transparent);
+}
+
+.account-id-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.account-id-body b {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.account-role {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.account-rename {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.account-rename input {
+  flex: 1;
+  min-width: 150px;
+  padding: 8px 11px;
+  border-radius: 10px;
+  border: 1.5px solid var(--brand);
+  background: var(--card);
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+  outline: none;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  padding: 2px 0;
+  color: var(--brand);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.link-btn:hover {
+  text-decoration: underline;
+}
+
+/* ---------- Código da família ---------- */
+
+.invite-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--sidebar-active);
+  border: 1px dashed color-mix(in srgb, var(--brand) 45%, var(--line));
+  border-radius: 14px;
+  padding: 14px 16px;
+  flex-wrap: wrap;
+}
+
+.invite-code {
+  flex: 1;
+  min-width: 120px;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  font-variant-numeric: tabular-nums;
+  color: var(--brand);
+  line-height: 1.1;
+}
+
+.invite-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.account-hint {
+  margin: 12px 0 0;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.account-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+
+/* ---------- Lista de membros ---------- */
+
+.member-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.member-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 12px;
+  background: var(--sidebar-active);
+  border-radius: 12px;
+}
+
+.member-item b {
+  display: block;
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.member-item span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.member-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+  background: var(--muted);
+}
+
+.member-dot[data-role='chefe'] {
+  background: var(--brand);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand) 18%, transparent);
+}
+
+.member-dot[data-role='trabalhador'] {
+  background: var(--ok, #34c759);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--ok, #34c759) 18%, transparent);
+}
+
+.you-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--brand);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+}
+
+/* ---------- Seletor de tema ---------- */
+
+.segmented {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  background: var(--sidebar-active);
+  border-radius: 12px;
+  padding: 4px;
+}
+
+.segmented-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 9px 4px;
+  border-radius: 9px;
+  transition:
+    background 0.18s cubic-bezier(0.4, 0, 0.6, 1),
+    color 0.18s cubic-bezier(0.4, 0, 0.6, 1),
+    transform 0.18s cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+.segmented-item:active {
+  transform: scale(0.96);
+}
+
+.segmented-item.on {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+}
+
+/* ---------- Resumo em grelha ---------- */
+
+.sum-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.sum-item {
+  background: var(--sidebar-active);
+  border-radius: 12px;
+  padding: 11px 13px;
+}
+
+.sum-item span {
+  display: block;
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-bottom: 3px;
+}
+
+.sum-item b {
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Sair da conta ---------- */
+
+.abtn.danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 30%, transparent);
+}
+
+.abtn.danger:hover {
+  background: color-mix(in srgb, var(--danger) 18%, transparent);
+}
+
+.logout-confirm p {
+  margin: 0 0 12px;
+  font-size: 13.5px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.logout-confirm p b {
+  color: var(--ink);
+}
+
+.logout-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ---------- Chip do utilizador (clicável) ---------- */
+
+.user-chip {
+  cursor: pointer;
+  transition:
+    border-color 0.16s cubic-bezier(0.4, 0, 0.6, 1),
+    transform 0.16s cubic-bezier(0.4, 0, 0.6, 1),
+    background 0.16s cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+.user-chip:hover {
+  border-color: color-mix(in srgb, var(--brand) 45%, var(--line));
+}
+
+.user-chip:active {
+  transform: scale(0.97);
+}
+
+/* Em ecrãs pequenos o chip fica compacto (só o avatar) */
+@media (max-width: 900px) {
+  .user-chip {
+    padding: 3px;
+    border-radius: 999px;
+  }
+  .user-chip .who {
+    display: none;
+  }
+}
+
+/* ---------- Barra inferior: alvos de toque maiores no telemóvel ---------- */
+
+@media (max-width: 900px) {
+  .side-item,
+  .abtn,
+  .segmented-item {
+    min-height: 44px;
+  }
+}
+
+.side-user {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 4px 6px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  color: inherit;
+  text-align: left;
+}
+
+.side-user:hover {
+  background: var(--sidebar-active);
 }

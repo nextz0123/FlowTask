@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { Session, Task } from '../../types'
 import type { Snapshot } from '../../lib/store'
 import { store } from '../../lib/store'
@@ -13,7 +13,8 @@ import {
 import { buildAdminStats } from '../../lib/stats'
 import { Avatar, EmptyState, Panel } from './ui'
 import { EarningsChart } from './Charts'
-import { Sidebar, type AdminView } from './Sidebar'
+import { AdminTabBar, Sidebar, type AdminView } from './Sidebar'
+import { AccountView } from './AccountView'
 import { TasksTable } from './TasksTable'
 import { History } from '../History'
 import { NewTaskForm } from '../NewTaskForm'
@@ -24,28 +25,13 @@ import { VersionTag } from '../VersionTag'
 import { WeekProgress } from '../WeekProgress'
 import { notifyNewTask } from '../../lib/notify'
 import { tapSuccess } from '../../lib/native-ui'
-
-type Theme = 'light' | 'dark'
-
-const THEME_KEY = 'flowtask-theme'
-
-function useTheme(): [Theme, () => void] {
-  const [theme, setTheme] = useState<Theme>(() => {
-    const saved = localStorage.getItem(THEME_KEY)
-    if (saved === 'light' || saved === 'dark') return saved
-    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-  })
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme
-    localStorage.setItem(THEME_KEY, theme)
-  }, [theme])
-  return [theme, () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))]
-}
+import { useTheme } from '../../lib/theme'
 
 const VIEW_TITLES: Record<AdminView, { title: string; subtitle: string }> = {
   inicio: { title: 'Início', subtitle: 'Resumo da semana e o que falta pagar.' },
   tarefas: { title: 'Tarefas', subtitle: 'Cria, acompanha e apaga tarefas.' },
   historico: { title: 'Histórico', subtitle: 'Todas as semanas, já fechadas.' },
+  conta: { title: 'Conta', subtitle: 'A tua conta, a família e as definições da app.' },
 }
 
 interface Props {
@@ -78,7 +64,7 @@ function BigStat({
 }
 
 export function AdminDashboard({ session, snapshot, onRefresh, onLogout, error }: Props) {
-  const [theme, toggleTheme] = useTheme()
+  const [theme, setTheme] = useTheme()
   const [view, setView] = useState<AdminView>('inicio')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [showForm, setShowForm] = useState(false)
@@ -141,23 +127,32 @@ export function AdminDashboard({ session, snapshot, onRefresh, onLogout, error }
 
       <div className="main">
         <header className="topnav">
-          <button className="icon-btn hide-mobile" onClick={() => setSidebarOpen(true)} aria-label="Menu">
+          <button className="icon-btn hide-mobile" onClick={() => setSidebarOpen(true)} aria-label="Abrir menu">
             ☰
           </button>
           <div className="crumb">
             <b>{meta.title}</b>
           </div>
           <div className="spacer" />
-          <button className="icon-btn" onClick={toggleTheme} aria-label="Mudar tema">
+          <button
+            className="icon-btn"
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            aria-label="Mudar tema"
+          >
             {theme === 'dark' ? '☀' : '☾'}
           </button>
-          <div className="user-chip hide-mobile">
+          <button
+            className="user-chip"
+            onClick={() => setView('conta')}
+            aria-label="A minha conta"
+            title="A minha conta"
+          >
             <Avatar name={session.name} />
             <div className="who">
               <b>{session.name}</b>
               <span>Chefe</span>
             </div>
-          </div>
+          </button>
         </header>
 
         <div className="page">
@@ -380,8 +375,23 @@ export function AdminDashboard({ session, snapshot, onRefresh, onLogout, error }
 
           {/* ---------- HISTÓRICO ---------- */}
           {view === 'historico' && <History tasks={tasks} payments={payments} />}
+
+          {/* ---------- CONTA ---------- */}
+          {view === 'conta' && (
+            <AccountView
+              session={session}
+              snapshot={snapshot}
+              theme={theme}
+              onTheme={setTheme}
+              onLogout={onLogout}
+              onRefresh={onRefresh}
+            />
+          )}
         </div>
       </div>
+
+      {/* Navegação no telemóvel — inclui sempre a opção de sair */}
+      <AdminTabBar view={view} onView={setView} pendingCount={toDo.length} />
 
       {payingWeek && (
         <PaymentModal

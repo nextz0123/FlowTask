@@ -9,7 +9,7 @@
  * Este valor aparece no ecrã do Login e no fundo da app,
  * e é enviado para o APK (android/app/build.gradle → versionName).
  */
-export const APP_VERSION = '1.3.0'
+export const APP_VERSION = '1.4.0'
 
 /** Data desta versão (formato legível). */
 export const APP_VERSION_DATE = '7 de novembro de 2026'

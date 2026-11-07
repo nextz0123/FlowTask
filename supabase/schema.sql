@@ -396,6 +396,38 @@ begin
 end;
 $$;
 
+-- ---------- Membro: mudar o próprio nome ----------
+
+create or replace function public.app_rename_member(
+  p_code text,
+  p_member_id uuid,
+  p_name text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_household uuid;
+  v_name text;
+begin
+  v_name := trim(coalesce(p_name, ''));
+  if length(v_name) < 1 then raise exception 'O nome não pode ficar vazio.'; end if;
+  if length(v_name) > 40 then raise exception 'O nome é demasiado longo.'; end if;
+
+  select h.id into v_household from households h
+  where upper(h.invite_code) = upper(trim(p_code));
+  if v_household is null then raise exception 'Código de família inválido.'; end if;
+
+  update members
+  set name = v_name
+  where id = p_member_id and household_id = v_household;
+
+  if not found then raise exception 'Membro não encontrado nesta família.'; end if;
+end;
+$$;
+
 -- ---------- Notificações push ----------
 
 -- Guarda/atualiza a subscrição de push de um aparelho.
@@ -501,6 +533,7 @@ revoke all on function public.app_delete_task(text, uuid) from public;
 revoke all on function public.app_pay_week(text, date, uuid[], integer, text, text) from public;
 revoke all on function public.app_send_reminder(text, uuid, date, integer, text) from public;
 revoke all on function public.app_mark_reminder_seen(text, uuid) from public;
+revoke all on function public.app_rename_member(text, uuid, text) from public;
 revoke all on function public.app_save_push_subscription(text, uuid, text, text, text, text) from public;
 revoke all on function public.app_remove_push_subscription(text, text) from public;
 revoke all on function public.app_push_status(text, text) from public;
@@ -515,6 +548,7 @@ grant execute on function public.app_delete_task(text, uuid) to anon, authentica
 grant execute on function public.app_pay_week(text, date, uuid[], integer, text, text) to anon, authenticated;
 grant execute on function public.app_send_reminder(text, uuid, date, integer, text) to anon, authenticated;
 grant execute on function public.app_mark_reminder_seen(text, uuid) to anon, authenticated;
+grant execute on function public.app_rename_member(text, uuid, text) to anon, authenticated;
 grant execute on function public.app_save_push_subscription(text, uuid, text, text, text, text) to anon, authenticated;
 grant execute on function public.app_remove_push_subscription(text, text) to anon, authenticated;
 grant execute on function public.app_push_status(text, text) to anon, authenticated;

@@ -69,6 +69,8 @@ export interface DataStore {
   saveNativePushToken(session: Session, token: string): Promise<void>
   /** Remove o token FCM deste aparelho. */
   removeNativePushToken(session: Session): Promise<void>
+  /** Muda o nome do próprio membro. */
+  renameMember(session: Session, name: string): Promise<void>
 }
 
 const uid = () =>
@@ -270,6 +272,15 @@ const demoStore: DataStore = {
     }
   },
 
+  async renameMember(session, name) {
+    const db = readDemo()
+    const m = db.members.find((x) => x.id === session.memberId)
+    if (m) {
+      m.name = name
+      writeDemo(db)
+    }
+  },
+
   // No modo demo não há servidor de push: guardamos localmente para a UI funcionar.
   async savePushSubscription(_session, input) {
     localStorage.setItem('flowtask-push-demo', input.endpoint)
@@ -407,6 +418,15 @@ const cloudStore: DataStore = {
     const { error } = await supabase!.rpc('app_mark_reminder_seen', {
       p_code: session.code,
       p_reminder_id: reminderId,
+    })
+    check(error)
+  },
+
+  async renameMember(session, name) {
+    const { error } = await supabase!.rpc('app_rename_member', {
+      p_code: session.code,
+      p_member_id: session.memberId,
+      p_name: name,
     })
     check(error)
   },
