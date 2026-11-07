@@ -21,6 +21,7 @@ import { PushSettings } from './PushSettings'
 import { VersionTag } from './VersionTag'
 import { WeekProgress } from './WeekProgress'
 import { notifyPaymentRequest, notifyTaskDeclined, notifyTaskDone } from '../lib/notify'
+import { tapSuccess, tapWarning } from '../lib/native-ui'
 
 // O painel do chefe (com gráficos) só é descarregado quando é preciso.
 const AdminDashboard = lazy(() =>
@@ -107,6 +108,7 @@ export function Dashboard({ session, onLogout }: Props) {
       })
       setReminderSent(true)
       await refresh()
+      void tapSuccess()
       // Avisa o chefe por notificação (não bloqueia se falhar)
       void notifyPaymentRequest(session.code, unpaid)
     } catch (err) {
@@ -274,6 +276,8 @@ export function Dashboard({ session, onLogout }: Props) {
         </button>
       </nav>
 
+      {/* A "key" faz as animações repetirem-se sempre que se troca de separador */}
+      <div className="tab-content" key={tab}>
       {tab === 'inicio' ? (
         <>
           {isChefe ? (
@@ -388,6 +392,7 @@ export function Dashboard({ session, onLogout }: Props) {
       ) : (
         <History tasks={tasks} payments={snapshot?.payments ?? []} />
       )}
+      </div>
 
       <p className="footer-note">
         {isCloudMode
@@ -405,6 +410,7 @@ export function Dashboard({ session, onLogout }: Props) {
           onDone={() => {
             const title = decliningTask.title
             setDecliningTask(null)
+            void tapWarning()
             void (async () => {
               await refresh()
               void notifyTaskDeclined(session.code, title, 'ver na app')
@@ -424,6 +430,7 @@ export function Dashboard({ session, onLogout }: Props) {
             void (async () => {
               try {
                 await store.completeTask(session, task.id)
+                void tapSuccess()
                 await refresh()
                 setConfirmingTask(null)
                 void notifyTaskDone(session.code, task.title)

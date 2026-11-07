@@ -9,8 +9,8 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         // Estes dois valores são atualizados por: pnpm version:sync
         // (a fonte da verdade é src/lib/version.ts)
-        versionCode 10100
-        versionName "1.1.0"
+        versionCode 10200
+        versionName "1.2.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

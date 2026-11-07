@@ -59,6 +59,7 @@ body {
 .tasks .task:nth-child(6) { animation-delay: 150ms; }
 .tasks .task:nth-child(7) { animation-delay: 180ms; }
 .tasks .task:nth-child(8) { animation-delay: 210ms; }
+.tasks .task:nth-child(n + 9) { animation-delay: 240ms; }
 
 /* ---------- Linhas de tarefa: mais respiração e toque ---------- */
 
@@ -367,3 +368,323 @@ select:focus-visible {
     max-width: 760px;
   }
 }
+
+/* ============================================================
+   ANIMAÇÕES — camada final
+   Pensadas sobretudo para o APK: dão fluidez e resposta ao toque.
+   Tudo respeita "prefers-reduced-motion" (regra no topo do ficheiro).
+   ============================================================ */
+
+/* ---------- 1. Modais: entram como uma folha iOS ---------- */
+
+@keyframes ft-backdrop {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes ft-sheet-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0.6;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes ft-sheet-pop {
+  from {
+    transform: scale(0.94) translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+.modal-backdrop {
+  animation: ft-backdrop 0.24s var(--ease-out) both;
+}
+
+.modal {
+  animation: ft-sheet-up 0.36s var(--ease) both;
+  will-change: transform;
+}
+
+/* Em ecrãs grandes o modal é uma caixa centrada: entra com "pop" */
+@media (min-width: 560px) {
+  .modal {
+    animation: ft-sheet-pop 0.28s var(--ease-out) both;
+  }
+}
+
+/* ---------- 2. Ícone de confirmação: entrada com mola ---------- */
+
+@keyframes ft-bounce-in {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  55% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  75% { transform: scale(0.96); }
+  100% { transform: scale(1); }
+}
+
+.confirm-icon {
+  animation: ft-bounce-in 0.52s var(--ease-out) 0.06s both;
+}
+
+/* ---------- 3. Anel a pulsar em algo importante ---------- */
+
+@keyframes ft-pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--brand) 45%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 12px transparent;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+.reminder .icon,
+.hero .amount {
+  /* só um brilho muito subtil, para não distrair */
+  animation: ft-soft-glow 3.2s ease-in-out infinite;
+}
+
+@keyframes ft-soft-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.88; }
+}
+
+/* ---------- 4. Botões: brilho ao passar o dedo ---------- */
+
+.btn,
+.abtn,
+.pay-option,
+.role {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Onda de luz que atravessa o botão quando é premido */
+@keyframes ft-ripple {
+  from {
+    transform: scale(0);
+    opacity: 0.35;
+  }
+  to {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+.btn::after,
+.abtn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 60%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, currentColor 0%, transparent 70%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.btn:active::after,
+.abtn:active::after {
+  animation: ft-ripple 0.5s var(--ease-out);
+}
+
+/* ---------- 5. Números do saldo: contagem suave ---------- */
+
+@keyframes ft-count-in {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+    filter: blur(3px);
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+.hero .amount,
+.hero .split b,
+.week-progress .wp-head b {
+  animation: ft-count-in 0.5s var(--ease-out) both;
+}
+
+/* ---------- 6. Badges e etiquetas: aparecem com um leve salto ---------- */
+
+@keyframes ft-badge-in {
+  from {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.badge,
+.due {
+  animation: ft-badge-in 0.28s var(--ease-out) both;
+}
+
+/* ---------- 7. Barra de progresso: preenche da esquerda ---------- */
+
+@keyframes ft-fill {
+  from { width: 0; }
+}
+
+.wp-fill {
+  animation: ft-fill 0.9s var(--ease-out) both;
+}
+
+/* ---------- 8. Troca de separadores: conteúdo desliza ---------- */
+
+@keyframes ft-tab-in {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* O React troca a "key" deste bloco ao mudar de separador,
+   por isso a animação volta a correr de cada vez. */
+.tab-content {
+  animation: ft-tab-in 0.3s var(--ease-out) both;
+}
+
+/* As linhas de tarefa entram escalonadas dentro do separador */
+.tab-content .task {
+  animation: ft-rise 0.3s var(--ease-out) both;
+}
+
+.tab-content .task:nth-child(1) { animation-delay: 20ms; }
+.tab-content .task:nth-child(2) { animation-delay: 50ms; }
+.tab-content .task:nth-child(3) { animation-delay: 80ms; }
+.tab-content .task:nth-child(4) { animation-delay: 110ms; }
+.tab-content .task:nth-child(5) { animation-delay: 140ms; }
+.tab-content .task:nth-child(6) { animation-delay: 170ms; }
+
+.app > .card,
+.app > .panel,
+.app > .hero,
+.app > .grid,
+.app > .callout,
+.admin-main > .card,
+.admin-main > .panel {
+  animation: ft-tab-in 0.34s var(--ease-out) both;
+}
+
+/* Escalona os blocos do painel do chefe */
+.admin-main > *:nth-child(2) { animation-delay: 40ms; }
+.admin-main > *:nth-child(3) { animation-delay: 80ms; }
+.admin-main > *:nth-child(4) { animation-delay: 120ms; }
+.admin-main > *:nth-child(5) { animation-delay: 160ms; }
+
+/* ---------- 9. Tarefa a desaparecer (marcada como feita) ---------- */
+
+@keyframes ft-task-out {
+  to {
+    transform: translateX(14px) scale(0.97);
+    opacity: 0;
+  }
+}
+
+.task.leaving {
+  animation: ft-task-out 0.26s var(--ease) both;
+  pointer-events: none;
+}
+
+/* ---------- 10. Ícone da barra inferior ao ficar ativo ---------- */
+
+@keyframes ft-icon-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+
+.ios-tabbar-app button.on .ico,
+.tabs button.on .ico {
+  animation: ft-icon-pop 0.36s var(--ease-out);
+}
+
+/* ---------- 11. Aviso de fim de semana: chama a atenção uma vez ---------- */
+
+@keyframes ft-nudge {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-3px); }
+  40% { transform: translateX(3px); }
+  60% { transform: translateX(-2px); }
+  80% { transform: translateX(2px); }
+}
+
+.reminder {
+  animation:
+    ft-rise 0.32s var(--ease-out) both,
+    ft-nudge 0.6s var(--ease) 0.45s;
+}
+
+/* ---------- 12. Ecrãs de carregamento: roda suave ---------- */
+
+@keyframes ft-spin {
+  to { transform: rotate(360deg); }
+}
+
+.spinner {
+  animation: ft-spin 0.8s linear infinite;
+}
+
+/* ---------- 13. Resposta ao toque mais rápida no APK ---------- */
+
+/* Sem atraso de 300ms e sem seleção acidental de texto ao premir */
+button,
+.role,
+.pay-option,
+.task,
+.tabs button,
+.ios-tabbar-app button {
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Campos de texto continuam selecionáveis, como deve ser */
+input,
+textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* ---------- 14. Rolagem com inércia (sensação nativa) ---------- */
+
+.modal,
+.history-scroll {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ---------- 15. Sem "flash" cinzento ao tocar no APK ---------- */
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+

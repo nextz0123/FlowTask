@@ -23,6 +23,7 @@ import { PushSettings } from '../PushSettings'
 import { VersionTag } from '../VersionTag'
 import { WeekProgress } from '../WeekProgress'
 import { notifyNewTask } from '../../lib/notify'
+import { tapSuccess } from '../../lib/native-ui'
 
 type Theme = 'light' | 'dark'
 
@@ -354,6 +355,7 @@ export function AdminDashboard({ session, snapshot, onRefresh, onLogout, error }
                       session={session}
                       onCreated={(task) => {
                         setShowForm(false)
+                        void tapSuccess()
                         void onRefresh()
                         void notifyNewTask(session.code, task.title, task.priceCents)
                       }}
@@ -390,6 +392,7 @@ export function AdminDashboard({ session, snapshot, onRefresh, onLogout, error }
           onClose={() => setPayingWeek(null)}
           onDone={() => {
             setPayingWeek(null)
+            void tapSuccess()
             void onRefresh()
           }}
         />
