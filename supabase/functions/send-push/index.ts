@@ -76,16 +76,32 @@ Deno.serve(async (req: Request) => {
     if (hErr) throw hErr
     if (!household) return json({ error: 'Código de família inválido.' }, 404)
 
-    // Subscrições dos destinatários
-    let query = supabase
-      .from('push_subscriptions')
-      .select('id, kind, endpoint, p256dh, auth')
-      .eq('household_id', household.id)
+    // Subscrições dos destinatários.
+    // A coluna "kind" distingue browser (web) de APK (fcm). Se ainda não existir
+    // na base de dados, assumimos que são todas Web Push — assim a função
+    // continua a funcionar antes de correr o SQL atualizado.
+    let hasKind = true
+    let subs: Sub[] | null = null
 
-    if (target !== 'ambos') query = query.eq('role', target)
+    const buildQuery = (withKind: boolean) => {
+      let q = supabase
+        .from('push_subscriptions')
+        .select(withKind ? 'id, kind, endpoint, p256dh, auth' : 'id, endpoint, p256dh, auth')
+        .eq('household_id', household.id)
+      if (target !== 'ambos') q = q.eq('role', target)
+      return q
+    }
 
-    const { data: subs, error: sErr } = await query
-    if (sErr) throw sErr
+    const first = await buildQuery(true)
+    if (first.error) {
+      hasKind = false
+      const second = await buildQuery(false)
+      if (second.error) throw second.error
+      subs = (second.data ?? []).map((s) => ({ ...s, kind: 'web' })) as Sub[]
+    } else {
+      subs = first.data as Sub[]
+    }
+    void hasKind
 
     if (!subs || subs.length === 0) {
       return json({ sent: 0, message: 'Nenhum aparelho subscrito.' })
@@ -94,30 +110,53 @@ Deno.serve(async (req: Request) => {
     const expired: string[] = []
     let sentWeb = 0
     let sentFcm = 0
+    // Motivos de falha, para se perceber o que corre mal num teste.
+    const problems: string[] = []
 
     // ---------- Web Push (browser / PWA) ----------
-    const webSubs = (subs as Sub[]).filter((s) => s.kind !== 'fcm')
+    const webSubs = subs.filter((s) => s.kind !== 'fcm')
 
-    if (webSubs.length > 0 && VAPID_PUBLIC && VAPID_PRIVATE) {
-      const payload = JSON.stringify({ title, body, tag, url })
-      await Promise.all(
-        webSubs.map(async (s) => {
-          try {
-            await webpush.sendNotification(
-              { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
-              payload,
-            )
-            sentWeb++
-          } catch (err) {
-            const status = (err as { statusCode?: number }).statusCode
-            if (status === 404 || status === 410) expired.push(s.id)
-          }
-        }),
-      )
+    if (webSubs.length > 0) {
+      if (!VAPID_PUBLIC || !VAPID_PRIVATE) {
+        problems.push('Web Push sem chaves VAPID configuradas.')
+      } else {
+        const payload = JSON.stringify({ title, body, tag, url })
+        await Promise.all(
+          webSubs.map(async (s) => {
+            try {
+              await webpush.sendNotification(
+                { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
+                payload,
+              )
+              sentWeb++
+            } catch (err) {
+              const status = (err as { statusCode?: number }).statusCode
+              const detail = (err as { body?: string }).body ?? (err as Error).message
+              // 404/410 = o browser já cancelou a subscrição.
+              // Chaves inválidas = registo corrompido (não vai funcionar nunca).
+              const isDead =
+                status === 404 ||
+                status === 410 ||
+                /p256dh value should be 65 bytes|auth value/i.test(String(detail))
+
+              if (isDead) {
+                expired.push(s.id)
+                problems.push(`Subscrição web inválida removida (${status ?? 'chaves más'}).`)
+              } else {
+                problems.push(`Web Push falhou (${status ?? 'sem código'}): ${detail}`)
+              }
+            }
+          }),
+        )
+      }
     }
 
     // ---------- APK Android (Firebase) ----------
-    const fcmSubs = (subs as Sub[]).filter((s) => s.kind === 'fcm')
+    const fcmSubs = subs.filter((s) => s.kind === 'fcm')
+
+    if (fcmSubs.length > 0 && !FCM_SERVICE_ACCOUNT) {
+      problems.push('APK/FCM sem o secret FCM_SERVICE_ACCOUNT configurado.')
+    }
 
     if (fcmSubs.length > 0 && FCM_SERVICE_ACCOUNT) {
       try {
@@ -155,15 +194,19 @@ Deno.serve(async (req: Request) => {
                 // Token inválido/desregistado -> limpar
                 if (res.status === 404 || errText.includes('UNREGISTERED')) {
                   expired.push(s.id)
+                  problems.push('Token do APK já não é válido (removido).')
+                } else {
+                  problems.push(`FCM falhou (${res.status}): ${errText.slice(0, 300)}`)
                 }
               }
-            } catch {
-              // ignora falha individual
+            } catch (err) {
+              problems.push(`FCM erro de rede: ${(err as Error).message}`)
             }
           }),
         )
-      } catch {
+      } catch (err) {
         // Conta de serviço inválida — não bloqueia os Web Push
+        problems.push(`Conta de serviço do Firebase inválida: ${(err as Error).message}`)
       }
     }
 
@@ -177,9 +220,18 @@ Deno.serve(async (req: Request) => {
       fcm: sentFcm,
       removed: expired.length,
       total: subs.length,
+      // Só aparece quando algo corre mal — ajuda a diagnosticar.
+      problems: problems.length > 0 ? problems : undefined,
     })
   } catch (err) {
-    return json({ error: err instanceof Error ? err.message : String(err) }, 500)
+    // Mensagem legível: o Supabase às vezes devolve objetos em vez de texto.
+    const msg =
+      err instanceof Error
+        ? err.message
+        : typeof err === 'object' && err !== null && 'message' in err
+          ? String((err as { message: unknown }).message)
+          : JSON.stringify(err)
+    return json({ error: msg }, 500)
   }
 })
 

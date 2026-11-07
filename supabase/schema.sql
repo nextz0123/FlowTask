@@ -422,6 +422,19 @@ begin
   if p_role not in ('chefe', 'trabalhador') then raise exception 'Papel inválido.'; end if;
   if p_kind not in ('web', 'fcm') then raise exception 'Tipo de notificação inválido.'; end if;
 
+  -- Validação: evita guardar registos que nunca conseguiriam receber notificações.
+  if p_endpoint is null or length(trim(p_endpoint)) < 40 then
+    raise exception 'Subscrição inválida: endpoint demasiado curto.';
+  end if;
+  if p_kind = 'web' then
+    if p_endpoint not like 'http%' then
+      raise exception 'Subscrição web inválida: endpoint deve ser um URL.';
+    end if;
+    if length(coalesce(p_p256dh, '')) < 80 or length(coalesce(p_auth, '')) < 20 then
+      raise exception 'Subscrição web inválida: chaves em falta.';
+    end if;
+  end if;
+
   insert into push_subscriptions (household_id, member_id, role, kind, endpoint, p256dh, auth)
   values (v_household, p_member_id, p_role, p_kind, p_endpoint, coalesce(p_p256dh, ''), coalesce(p_auth, ''))
   on conflict (endpoint) do update
